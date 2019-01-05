@@ -317,3 +317,20 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
   END_RCPP
 }
 
+
+
+// Register native routines
+// tools::package_native_routine_registration_skeleton("sonic")
+static const R_CallMethodDef CallEntries[] = {
+  {"fit", (DL_FUNC) &fit, 7},
+  {NULL, NULL, 0}
+};
+
+
+
+void R_init_sonic(DllInfo *dll)
+{
+  R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+  R_useDynamicSymbols(dll, FALSE);
+}
+

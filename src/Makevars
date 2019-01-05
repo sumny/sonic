@@ -1,20 +1,14 @@
 # sonic Makevars
 # FIXME get OPENMP right; currently disabled
+# FIXME move own files directly to src directory
 
 SDIR = .
 sonic_DIR = $(SDIR)/soniclib
 sonic_SRC_DIR = $(sonic_DIR)/src
 sonic_HEADER_DIR = $(sonic_DIR)/include
 
-# Check for the default Apple compiler, where we pass CXX to recognise R's settings
-APPLE_COMPILER := $(shell CXX11='$(CXX)' $(CXX11) --version 2>&1 | grep -i -c -E 'apple llvm')
-
-ifeq ($(APPLE_COMPILER),0)
-	sonic_OPENMP=
-	#sonic_OPENMP= $(SHLIB_OPENMP_CXXFLAGS) -DARMA_USE_OPENMP
-else
-	sonic_OPENMP=
-endif
+sonic_OPENMP=
+#sonic_OPENMP= $(SHLIB_OPENMP_CXXFLAGS) -DARMA_USE_OPENMP
 
 PKG_CPPFLAGS= $(CXX11STD) $(sonic_OPENMP) -DUSE_RCPP_ARMADILLO -DARMA_NO_DEBUG -I./soniclib/include/ -I./soniclib/include/optim -I./soniclib/include/var
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

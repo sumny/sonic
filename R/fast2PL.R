@@ -105,7 +105,7 @@ fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
   Rgd_settings[names(gd_settings)] <- gd_settings
 
   ## fit
-  fit <- .Call("fit", y, weights, as.integer(impact) - 1, start, Rcontrol, Ralgo_settings, Rgd_settings, PACKAGE = "sonic")
+  fit <- .Call("fit", y, weights, as.integer(impact) - 1, start, Rcontrol, Ralgo_settings, Rgd_settings)
 
   class(fit) <- "fast2PL"
 
