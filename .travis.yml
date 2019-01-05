@@ -1,0 +1,26 @@
+language: r
+warnings_are_errors: false
+sudo: false
+cache: packages
+
+r:
+  - devel
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change
+
+r_binary_packages:
+  - Rcpp
+  - RcppArmadillo
+  - testthat
+
+r_build_args: "--no-build-vignettes"
+r_check_args: "--no-build-vignettes --as-cran"
+
+script:
+  - make install
+  - make check
+  - make test
+
