@@ -1,0 +1,42 @@
+# sonic Makevars
+# FIXME get OPENMP right; currently disabled
+
+SDIR = .
+sonic_DIR = $(SDIR)/soniclib
+sonic_SRC_DIR = $(sonic_DIR)/src
+sonic_HEADER_DIR = $(sonic_DIR)/include
+
+# Check for the default Apple compiler, where we pass CXX to recognise R's settings
+APPLE_COMPILER := $(shell CXX11='$(CXX)' $(CXX11) --version 2>&1 | grep -i -c -E 'apple llvm')
+
+ifeq ($(APPLE_COMPILER),0)
+	sonic_OPENMP=
+	#sonic_OPENMP= $(SHLIB_OPENMP_CXXFLAGS) -DARMA_USE_OPENMP
+else
+	sonic_OPENMP=
+endif
+
+PKG_CPPFLAGS= $(CXX11STD) $(sonic_OPENMP) -DUSE_RCPP_ARMADILLO -DARMA_NO_DEBUG -I./soniclib/include/ -I./soniclib/include/optim -I./soniclib/include/var
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+
+CXX_STD=CXX11STD
+
+OPTIM_SRC_DIR = $(sonic_SRC_DIR)/optim
+VAR_SRC_DIR = $(sonic_SRC_DIR)/var
+
+# Optim files
+SOURCES_OPTIM= $(OPTIM_SRC_DIR)/unconstrained/bfgs.cpp  $(OPTIM_SRC_DIR)/unconstrained/lbfgs.cpp $(OPTIM_SRC_DIR)/unconstrained/cg.cpp $(OPTIM_SRC_DIR)/unconstrained/gd.cpp $(OPTIM_SRC_DIR)/unconstrained/nm.cpp $(OPTIM_SRC_DIR)/unconstrained/de.cpp $(OPTIM_SRC_DIR)/unconstrained/pso.cpp $(OPTIM_SRC_DIR)/line_search/more_thuente.cpp
+OBJECTS_OPTIM= $(SOURCES_OPTIM:.cpp=.o)
+
+# Other files
+SOURCES_VAR= $(VAR_SRC_DIR)/fit.cpp $(VAR_SRC_DIR)/accelerate.cpp $(VAR_SRC_DIR)/Estep.cpp $(VAR_SRC_DIR)/Mstep.cpp $(VAR_SRC_DIR)/preprocess.cpp $(VAR_SRC_DIR)/primes.cpp
+OBJECTS_VAR= $(SOURCES_VAR:.cpp=.o)
+
+OBJECTS_sonic= $(OBJECTS_OPTIM) $(OBJECTS_VAR)
+
+all: $(SHLIB) libsonic$(SHLIB_EXT)
+
+libsonic$(SHLIB_EXT): $(OBJECTS_sonic)
+	$(SHLIB_CXX11LD) $(SHLIB_CXX11LDFLAGS) -o sonic$(SHLIB_EXT) $(OBJECTS_sonic) $(ALL_LIBS)
+#libsonic$(SHLIB_EXT): $(OBJECTS_sonic)
+	#$(SHLIB_CXX11LD) $(SHLIB_OPENMP_CXXFLAGS) $(SHLIB_CXX11LDFLAGS) -o sonic$(SHLIB_EXT) $(OBJECTS_sonic) $(ALL_LIBS)

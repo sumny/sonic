@@ -1,0 +1,5 @@
+useDynLib(sonic)
+exportPattern("^[[:alpha:]]+")
+importFrom("Rcpp", "evalCpp")
+importFrom("stats", "aggregate", "qnorm", "var")
+
