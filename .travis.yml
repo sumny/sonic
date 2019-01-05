@@ -1,10 +1,7 @@
 language: r
-warnings_are_errors: false
-sudo: false
 cache: packages
-
-r:
-  - devel
+sudo: false
+warnings_are_errors: false
 
 notifications:
   email:
@@ -18,9 +15,4 @@ r_binary_packages:
 
 r_build_args: "--no-build-vignettes"
 r_check_args: "--no-build-vignettes --as-cran"
-
-script:
-  - make install
-  - make check
-  - make test
 
