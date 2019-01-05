@@ -12,3 +12,4 @@ Imports: stats
 Suggests: testthat
 LinkingTo: Rcpp, RcppArmadillo (>= 0.7.960.0)
 NeedsCompilation: yes
+
