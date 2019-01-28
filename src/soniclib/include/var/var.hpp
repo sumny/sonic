@@ -5,10 +5,9 @@
 
 namespace sonic
 {
-  #include "accelerate.hpp"
-  #include "Estep.hpp"
   #include "Mstep.hpp"
-  #include "primes.hpp"
+  #include "Estep.hpp"
+  #include "accelerate.hpp"
   #include "preprocess.hpp"
 }
 

@@ -2,28 +2,28 @@
 # FIXME get OPENMP right; currently disabled
 # FIXME move own files directly to src directory
 
-SDIR = .
-sonic_DIR = $(SDIR)/soniclib
-sonic_SRC_DIR = $(sonic_DIR)/src
-sonic_HEADER_DIR = $(sonic_DIR)/include
+SDIR= .
+sonic_DIR= $(SDIR)/soniclib
+sonic_SRC_DIR= $(sonic_DIR)/src
+sonic_HEADER_DIR= $(sonic_DIR)/include
 
-sonic_OPENMP=
-#sonic_OPENMP= $(SHLIB_OPENMP_CXXFLAGS) -DARMA_USE_OPENMP
+sonic_OPENMP= -DARMA_DONT_USE_OPENMP -DOPTIM_DONT_USE_OPENMP
+#sonic_OPENMP= $(SHLIB_OPENMP_CXXFLAGS) -DARMA_USE_OPENMP -DOPTIM_USE_OPENMP
 
 PKG_CPPFLAGS= $(CXX11STD) $(sonic_OPENMP) -DUSE_RCPP_ARMADILLO -DARMA_NO_DEBUG -I./soniclib/include/ -I./soniclib/include/optim -I./soniclib/include/var
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 
 CXX_STD=CXX11STD
 
-OPTIM_SRC_DIR = $(sonic_SRC_DIR)/optim
-VAR_SRC_DIR = $(sonic_SRC_DIR)/var
+OPTIM_SRC_DIR= $(sonic_SRC_DIR)/optim
+VAR_SRC_DIR= $(sonic_SRC_DIR)/var
 
 # Optim files
-SOURCES_OPTIM= $(OPTIM_SRC_DIR)/unconstrained/bfgs.cpp  $(OPTIM_SRC_DIR)/unconstrained/lbfgs.cpp $(OPTIM_SRC_DIR)/unconstrained/cg.cpp $(OPTIM_SRC_DIR)/unconstrained/gd.cpp $(OPTIM_SRC_DIR)/unconstrained/nm.cpp $(OPTIM_SRC_DIR)/unconstrained/de.cpp $(OPTIM_SRC_DIR)/unconstrained/pso.cpp $(OPTIM_SRC_DIR)/line_search/more_thuente.cpp
+SOURCES_OPTIM= $(OPTIM_SRC_DIR)/unconstrained/newton.cpp $(OPTIM_SRC_DIR)/unconstrained/bfgs.cpp $(OPTIM_SRC_DIR)/unconstrained/lbfgs.cpp $(OPTIM_SRC_DIR)/unconstrained/cg.cpp $(OPTIM_SRC_DIR)/unconstrained/gd.cpp $(OPTIM_SRC_DIR)/unconstrained/nm.cpp $(OPTIM_SRC_DIR)/unconstrained/de.cpp $(OPTIM_SRC_DIR)/unconstrained/pso.cpp $(OPTIM_SRC_DIR)/line_search/more_thuente.cpp
 OBJECTS_OPTIM= $(SOURCES_OPTIM:.cpp=.o)
 
 # Other files
-SOURCES_VAR= $(VAR_SRC_DIR)/fit.cpp $(VAR_SRC_DIR)/accelerate.cpp $(VAR_SRC_DIR)/Estep.cpp $(VAR_SRC_DIR)/Mstep.cpp $(VAR_SRC_DIR)/preprocess.cpp $(VAR_SRC_DIR)/primes.cpp
+SOURCES_VAR= $(VAR_SRC_DIR)/fit.cpp $(VAR_SRC_DIR)/accelerate.cpp $(VAR_SRC_DIR)/Estep.cpp $(VAR_SRC_DIR)/Mstep.cpp $(VAR_SRC_DIR)/preprocess.cpp
 OBJECTS_VAR= $(SOURCES_VAR:.cpp=.o)
 
 OBJECTS_sonic= $(OBJECTS_OPTIM) $(OBJECTS_VAR)

@@ -1,9 +1,14 @@
 #ifndef _preprocess_HPP
 #define _preprocess_HPP
 
-// preprocess function
-void preprocess(arma::mat *y, arma::vec *weights, arma::vec *impact, int *G,
-  arma::vec *primes, int *P, arma::mat *rgl, arma::mat *y_);
+// generate the first N prime numbers
+arma::vec generatePrimes(const arma::uword N);
+
+
+// preprocess data
+arma::mat preprocess(const arma::mat& y, const arma::vec& weights,
+  const arma::uvec& impact, const arma::uword N, const arma::uword G,
+  arma::uword& P, arma::mat& y_u);
 
 #endif
 
