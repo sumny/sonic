@@ -11,7 +11,7 @@
 
 \usage{
 fast2PL(y, weights = NULL, impact = NULL, start = NULL,
-  control = list(optimizer = c("Newton", "BFGS", "L-BFGS-B", "CG", "GD", "NM", "DE", "PSO"), accelerator = c("none", "Ramsay", "SQUAREM", "VA-Steffensen"), maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterium = c("ll", "l2", "l2_itemwise")),
+  control = list(optimizer = c("Newton", "BFGS", "L-BFGS-B", "CG", "GD", "NM", "DE", "PSO"), accelerator = c("none", "Ramsay", "SQUAREM", "Zhou", "Anderson"), maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterium = c("ll", "l2", "l2_itemwise")),
   algo_settings = list(err_tol = 1e-8, iter_max = 2000L, lbfgs_par_M = 10L,
     cg_method = c("FR", "PR", "FR-PR", "HS", "DY", "HZ"), cg_restart_threshold = 0.1,
     gd_method = c("Basic", "Momentum", "NAG", "AdaGrad", "RMSprop", "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax"),
@@ -41,7 +41,7 @@ fast2PL(y, weights = NULL, impact = NULL, start = NULL,
 }
 
 \value{
-  \code{fast2PL} returns an S3 object of class \code{"fast2PL"}, 
+  \code{fast2PL} returns an S3 object of class \code{"twopl"}, 
   i.e., a list of the following components:
   \item{ipars}{estimated item parameters in slope/intercept parametrization,}
   \item{mu}{(estimated) mean(s) of the normal distribution(s) for the person
@@ -50,6 +50,9 @@ fast2PL(y, weights = NULL, impact = NULL, start = NULL,
     the person parameters (for each level of \code{impact}),}
   \item{iter}{number of iterations until the EM algorithm converged,}
   \item{ll}{log-likelihood of the fitted model,}
+  \item{converged}{convergence code (0 or 1),}
+  \item{convergence}{vector of convergence with logicals indicating convergence
+    in each EM iteration,}
   \item{critval}{critical value indicating termination of the EM,}
   \item{y_u}{processed item response matrix containing unique rows (possibly
     reordered),}

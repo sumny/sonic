@@ -5,6 +5,7 @@
 
 namespace sonic
 {
+  #include "misc.hpp"
   #include "Mstep.hpp"
   #include "Estep.hpp"
   #include "accelerate.hpp"

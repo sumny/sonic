@@ -23,7 +23,7 @@ SOURCES_OPTIM= $(OPTIM_SRC_DIR)/unconstrained/newton.cpp $(OPTIM_SRC_DIR)/uncons
 OBJECTS_OPTIM= $(SOURCES_OPTIM:.cpp=.o)
 
 # Other files
-SOURCES_VAR= $(VAR_SRC_DIR)/fit.cpp $(VAR_SRC_DIR)/accelerate.cpp $(VAR_SRC_DIR)/Estep.cpp $(VAR_SRC_DIR)/Mstep.cpp $(VAR_SRC_DIR)/preprocess.cpp
+SOURCES_VAR= $(VAR_SRC_DIR)/fit.cpp $(VAR_SRC_DIR)/accelerate.cpp $(VAR_SRC_DIR)/Estep.cpp $(VAR_SRC_DIR)/Mstep.cpp $(VAR_SRC_DIR)/preprocess.cpp $(VAR_SRC_DIR)/misc.cpp
 OBJECTS_VAR= $(SOURCES_VAR:.cpp=.o)
 
 OBJECTS_sonic= $(OBJECTS_OPTIM) $(OBJECTS_VAR)

@@ -70,7 +70,9 @@ bool sonic::Mstep_items(arma::vec& ipars, const bool global, const arma::uword o
       }
     }
   }
+
   return(converged);
+
 }
 
 
@@ -137,6 +139,7 @@ double sonic::llfun_i_wh(const arma::vec &pars_in, arma::vec *grad_out, arma::ma
   }
 
   return(- objfn_data->ll);
+
 }
 
 
@@ -168,6 +171,7 @@ double sonic::llfun_i(const arma::vec &pars_in, arma::vec *grad_out, void *opt_d
   }
 
   return(- objfn_data->ll);
+
 }
 
 
@@ -199,13 +203,13 @@ double sonic::llfun_g_wh(const arma::vec &pars_in, arma::vec *grad_out, arma::ma
 
   if(hess_out) {
     (objfn_data->hess_out).zeros();
-    objfn_data->W_tmp = (objfn_data->Probs).cols(objfn_data->o_ind) % (objfn_data->Probs).cols(objfn_data->o_ind);
+    objfn_data->W_tmp = (objfn_data->Probs).cols(objfn_data->o_ind) % (objfn_data->Probs).cols(objfn_data->z_ind);
     for(arma::uword g = 0; g < objfn_data->G; ++g) {
       objfn_data->n_vec.for_each( [&objfn_data, &g](const arma::uword &j) {
-        (objfn_data->hess_out)(2 * j, 2 * j) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), 2 * j + 1) % objfn_data->W_tmp % arma::square(objfn_data->X));
-        (objfn_data->hess_out)(2 * j, 2 * j + 1) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), 2 * j + 1) % objfn_data->W_tmp % objfn_data->X);
-        (objfn_data->hess_out)(2 * j + 1, 2 * j) += (objfn_data->hess_out)(2 * j, 2 * j + 1);
-        (objfn_data->hess_out)(2 * j + 1, 2 * j + 1) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), 2 * j + 1) % objfn_data->W_tmp);
+        (objfn_data->hess_out)(2 * j, 2 * j) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), (2 * j) + 1) % objfn_data->W_tmp % arma::square(objfn_data->X));
+        (objfn_data->hess_out)(2 * j, (2 * j) + 1) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), (2 * j) + 1) % objfn_data->W_tmp % objfn_data->X);
+        (objfn_data->hess_out)((2 * j) + 1, 2 * j) += (objfn_data->hess_out)(2 * j, (2 * j) + 1);
+        (objfn_data->hess_out)((2 * j) + 1, (2 * j) + 1) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), (2 * j) + 1) % objfn_data->W_tmp);
       });
     }
   *hess_out = objfn_data->hess_out;
@@ -218,6 +222,7 @@ double sonic::llfun_g_wh(const arma::vec &pars_in, arma::vec *grad_out, arma::ma
   }
   
   return(- objfn_data->ll);
+
 }
 
 
@@ -254,5 +259,6 @@ double sonic::llfun_g(const arma::vec &pars_in, arma::vec *grad_out, void *opt_d
   }
   
   return(- objfn_data->ll);
+
 }
 

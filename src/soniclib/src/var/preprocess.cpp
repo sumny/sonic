@@ -8,6 +8,7 @@ arma::vec sonic::generatePrimes(const arma::uword N)
 {
   arma::uword j = 0, num = 1, pc = 0;
   arma::vec primes(N, arma::fill::none);
+
   while(j < N) {
     pc = 0;
     ++num;
@@ -21,7 +22,9 @@ arma::vec sonic::generatePrimes(const arma::uword N)
       ++j;
     }
   }
+
   return(primes);
+
 }
 
 
@@ -45,7 +48,6 @@ arma::mat sonic::preprocess(const arma::mat& y, const arma::vec& weights,
   P = pid_unique.size();
 
   // unique patterns groupwise and rgl
-  // FIXME p_vec redundant
   arma::uvec g_id;
   arma::vec weights_g;
   arma::vec pats_g;
@@ -64,5 +66,6 @@ arma::mat sonic::preprocess(const arma::mat& y, const arma::vec& weights,
   y_u = y.rows(pid_unique);
 
   return(rgl);
+
 }
 

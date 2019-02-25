@@ -1,5 +1,5 @@
 fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
-  control = list(optimizer = c("Newton", "BFGS", "L-BFGS-B", "CG", "GD", "NM", "DE", "PSO"), accelerator = c("none", "Ramsay", "SQUAREM", "VA-Steffensen"), maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterium = c("ll", "l2", "l2_itemwise")),
+  control = list(optimizer = c("Newton", "BFGS", "L-BFGS-B", "CG", "GD", "NM", "DE", "PSO"), accelerator = c("none", "Ramsay", "SQUAREM", "Zhou", "Anderson"), maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterium = c("ll", "l2", "l2_itemwise")),
   algo_settings = list(err_tol = 1e-8, iter_max = 2000L, lbfgs_par_M = 10L,
     cg_method = c("FR", "PR", "FR-PR", "HS", "DY", "HZ"), cg_restart_threshold = 0.1,
     gd_method = c("Basic", "Momentum", "NAG", "AdaGrad", "RMSprop", "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax"),
@@ -53,8 +53,8 @@ fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
 
   ## accelerator (starting from 0)
   control$accelerator <- as.integer(factor(match.arg(control$accelerator,
-    c("none", "Ramsay", "SQUAREM", "VA-Steffensen")),
-    levels = c("none", "Ramsay", "SQUAREM", "VA-Steffensen"))) - 1L
+    c("none", "Ramsay", "SQUAREM", "Zhou", "Anderson")),
+    levels = c("none", "Ramsay", "SQUAREM", "Zhou", "Anderson"))) - 1L
 
   ## maxit, reltol, Q, global
 
@@ -109,7 +109,7 @@ fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
   ## fit
   fit <- .Call("fit", y, weights, as.integer(impact) - 1, start, Rcontrol, Ralgo_settings)
 
-  class(fit) <- "fast2PL"
+  class(fit) <- "twopl"
 
   return(fit)
 }

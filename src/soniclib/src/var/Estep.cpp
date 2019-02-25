@@ -11,12 +11,12 @@ void sonic::Estep(const arma::mat& y_u, const arma::mat& y_u_, const arma::mat& 
   Prob = arma::trunc_log(Prob);
 
   // pul = probability of patterns given quadratures (Q x P)
+  // NA fix should go here?
   p_vec.for_each( [&pul, &Prob, &Prob_, &y_u, &y_u_](const arma::uword &l) {
     pul.col(l) = arma::trunc_exp((Prob * (y_u.row(l)).t()) + (Prob_ * (y_u_.row(l)).t()));
   });
 
   // pgul = pul weighted with groupwise quadrature weights (P x G)
-  // FIXME drop this into the loop below
   pgul = pul.t() * AX;
 
   // rj_g = expected number of persons solving (1, 3, ...) and not solving (0, 2, ...) each item given quadratures sliced for groups (Q, 2 * N, G)

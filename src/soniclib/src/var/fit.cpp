@@ -4,16 +4,20 @@
 #include <math.h>
 #include <RcppArmadillo.h>
 #include <Rcpp/Benchmark/Timer.h>
+#include <time.h>
 #include <utility>
 
 // fit function
-// FIXME replace arma::accu and arma::sum with matrix multiplication
+// FIXME replace arma::accu and arma::sum with matrix multiplication, arma::norm
 // FIXME check order of arguments in all functions etc. and rearrange if needed
 // FIXME faster way for G = 1
 // FIXME reduce maxit = 0 time
 // FIXME get OPENMP right; currently disabled
 // FIXME check iteration sequences
 // FIXME check which par vectors needed
+// FIXME L-BFGS-B and infinite values 
+// FIXME NA values
+// FIXME probs function in misc.cpp?
 RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcontrol, SEXP Ralgo_settings)
 {
   BEGIN_RCPP
@@ -22,7 +26,7 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
   timer.step("start");
 
   // initial const declarations
-  // FIXME try to use oneliners
+  // FIXME try to use one-liners
   const arma::mat y = Rcpp::as<arma::mat>(Ry);
   const arma::vec weights = Rcpp::as<arma::vec>(Rweights);
   const arma::uvec impact = Rcpp::as<arma::uvec>(Rimpact);
@@ -49,7 +53,6 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
   arma::vec sg = arma::sqrt(Rcpp::as<arma::vec>(start[2]));
 
   // quadrature stuff
-  // FIXME implement other types
   const arma::vec X = arma::linspace<arma::vec>(-6, 6, Q);
   arma::mat AX(Q, G, arma::fill::none);
   for(arma::uword g = 0; g < G; ++g) {
@@ -177,18 +180,29 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
   timer.step("postE1");
 
   // accelerator stuff
-  arma::vec preM2 = ipars;
+  arma::vec preM3 = ipars;
+  arma::vec preM2 = preM3;
   arma::vec preM1 = preM2;
-  arma::vec preM2_va = ipars;
-  arma::vec preM1_va = preM2_va;
-  arma::vec ipars_va = preM1_va;
+  arma::mat U(2 * N, 3, arma::fill::zeros);
+  arma::mat V(2 * N, 3, arma::fill::zeros);
+  arma::uword mk = 1;
+  arma::uword Mk = 10;
+  arma::vec fold = ipars;
+  arma::vec fnew = fold;
+  arma::vec xold = ipars;
+  arma::vec xnew = xold;
+  arma::mat Fdiff = arma::zeros<arma::mat>(2 * N, Mk);
+  arma::mat Xdiff = Fdiff;
 
   // debug stuff
   //opt_data_g.rj_g = rj_g;
   //arma::vec gradient_g = arma::vec(2 * N);
   //double ll = sonic::llfun_g(ipars, &gradient_g, &opt_data_g);
   //run = false;
-  
+
+  // run simulations only 60 seconds CPU time (see bottom of the loop)
+  std::clock_t extra_time = std::clock();
+
   // EM
   if(maxit > 0) {
     while(run) {
@@ -204,13 +218,9 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
       }
       timer.step("postM");
 
-      // acceleration
-      // EM acceleration, 0 == "none", 1 == "Ramsay", 2 == "SQUAREM", FIXME 3 = "VA-Steffensen", ...
-      // FIXME itemwise / parameterwise acceleration? Probably not needed
+      // EM acceleration, 0 == "none", 1 == "Ramsay", 2 == "SQUAREM", 3 == "Zhou", 4 == "Anderson"
       timer.step("preA");
-      if((accelerator != 0) && (std::fmod(iter, 2) == 0)) {
-        sonic::accelerate(y_u, y_u_, rgl, N, G, P, Q, ipars, X, AX, p_vec, n_vec, a_ind, d_ind, preM1, preM2, accelerator, ll, preM2_va, preM1_va, ipars_va, global, optimizer, rj_g, &opt_data_g, &opt_data_g_wh, &opt_data_i, &opt_data_i_wh, settings);
-      }
+      sonic::accelerate(y_u, y_u_, rgl, N, G, P, Q, ipars, X, AX, p_vec, n_vec, a_ind, d_ind, preM1, preM2, accelerator, ll, mk, Fdiff, Xdiff, fnew, fold, xnew, xold, U, V, iter);
       timer.step("postA");
 
       timer.step("preE");
@@ -218,40 +228,35 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
       ll_new = ll;
       timer.step("postE");
 
-      // termination criterium
-      // termination criterium, 0 == "ll", 1 == "l2", 2 == "l2_itemwise", FIXME 3 = "ll_itemwise"
+      // termination criterium, 0 == "ll", 1 == "l2", 2 == "l2_itemwise"
       // FIXME seperate function for termination
-      if(accelerator == 3) {
-        if(std::fmod(iter, 2) == 0) {
-          critval = arma::accu(arma::square(ipars - preM2_va));
-        }
-      } else {
-        if(criterium == 0) {
-          critval = ll_new - ll_old;
-        } else if(criterium == 1) {
-          critval = std::sqrt(arma::accu(arma::square(ipars_va - preM1_va)));
-        } else if(criterium == 2) {
-          // FIXME check this
-          n_vec.for_each( [&itemnrm, &ipars, &preM1, &item_ind, &itemopt, &reltol](const arma::uword &j) {
-            item_ind(0) = j;
-            item_ind(1) = j + 1;
-            itemnrm(j) = std::sqrt(arma::accu(arma::square(ipars.elem(item_ind) - preM1.elem(item_ind))));
-            if(itemnrm(j) < reltol) {
-              itemopt(j) = 0;
-            }
-          });
-          if(arma::accu(itemopt) == 0) {
-            critval = 0;
-          } else {
-            critval = reltol + 1;
+      if(criterium == 0) {
+        critval = ll_new - ll_old;
+      } else if(criterium == 1) {
+        critval = std::sqrt(arma::accu(arma::square(ipars - preM1)));
+      } else if(criterium == 2) {
+        // FIXME check this
+        n_vec.for_each( [&itemnrm, &ipars, &preM1, &item_ind, &itemopt, &reltol](const arma::uword &j) {
+          item_ind(0) = j;
+          item_ind(1) = j + 1;
+          itemnrm(j) = std::sqrt(arma::accu(arma::square(ipars.elem(item_ind) - preM1.elem(item_ind))));
+          if(itemnrm(j) < reltol) {
+            itemopt(j) = 0;
           }
+        });
+        // FIXME set this to the highest norm
+        if(arma::accu(itemopt) == 0) {
+          critval = 0;
+        } else {
+          critval = reltol + 1;
         }
       }
 
       // check for termination
-      if((critval < reltol) || (iter == maxit)) {
+      if((critval < reltol) || (iter == maxit) || (((std::clock() - extra_time) / (double) CLOCKS_PER_SEC) >= 60)) {
         run = false;
       } else {
+        preM3 = preM2;
         preM2 = preM1;
         preM1 = ipars;
       }
@@ -259,26 +264,26 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
     }
   } else {
     ll_new = ll;
+    convergence = convergence[0];
   }
+
+  double converged = critval <= reltol;
 
   timer.step("stop");
   Rcpp::NumericVector time(timer);
+
   Rcpp::List ret;
   ret["ipars"] = Rcpp::wrap(ipars);
   ret["mu"] = Rcpp::wrap(mu);
   ret["sg"] = Rcpp::wrap(sg);
   ret["iter"] = Rcpp::wrap(iter);
   ret["ll"] = Rcpp::wrap(ll_new);
+  ret["converged"] = Rcpp::wrap(converged);
+  ret["convergence"] = Rcpp::wrap(convergence[Rcpp::Range(0, iter - 1)]);
   ret["critval"] = Rcpp::wrap(critval);
   ret["y_u"] = Rcpp::wrap(y_u);
   ret["rgl"] = Rcpp::wrap(rgl);
   ret["time"] = Rcpp::wrap(time);
-  // FIXME iter - 1 and what if maxit == 0
-  //ret["convergence"] = Rcpp::wrap(convergence[Rcpp::Range(0, iter)]);
-  //ret["itemnrm"] = Rcpp::wrap(itemnrm);
-  //ret["preM2_va"] = Rcpp::wrap(preM2_va);
-  //ret["preM1_va"] = Rcpp::wrap(preM1_va);
-  //ret["ipars_va"] = Rcpp::wrap(ipars_va);
   // debug stuff
   //ret["debug_ll"] = Rcpp::wrap(ll);
   //ret["debug_gr"] = Rcpp::wrap(gradient_g);
