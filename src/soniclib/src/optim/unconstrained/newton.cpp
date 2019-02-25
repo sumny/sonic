@@ -18,11 +18,14 @@
   ##
   ################################################################################*/
 
+// Modifications copyright (C) 2019 Lennart Schneider
+
 /*
  * Newton's method for non-linear optimization
  */
 
 #include "optim.hpp"
+#include "var.hpp"
 
 bool
 optim::newton_int(arma::vec& init_out_vals, std::function<double (const arma::vec& vals_inp, arma::vec* grad_out, arma::mat* hess_out, void* opt_data)> opt_objfn, void* opt_data, algo_settings_t* settings_inp)
@@ -70,7 +73,8 @@ optim::newton_int(arma::vec& init_out_vals, std::function<double (const arma::ve
     //
     // if ||gradient(initial values)|| > tolerance, then continue
 
-    arma::vec d = - arma::solve(H,grad); // Newton direction
+    //arma::vec d = - arma::solve(H,grad); // Newton direction
+    arma::vec d = - sonic::solve(H) * grad;
 
     arma::vec x_p = x + d; // no line search used here
 
@@ -94,7 +98,11 @@ optim::newton_int(arma::vec& init_out_vals, std::function<double (const arma::ve
 
         //
 
-        d = - arma::solve(H,grad);
+        //d = - arma::solve(H,grad);
+        d = - sonic::solve(H) * grad;
+        d.elem(arma::find(d > 0.25)).fill(0.25);
+        d.elem(arma::find(d < -0.25)).fill(-0.25);
+
         x_p = x + d;
         
         opt_objfn(x_p,&grad,&H,opt_data);
