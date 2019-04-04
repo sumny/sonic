@@ -1,5 +1,5 @@
-fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
-  control = list(optimizer = c("Newton", "BFGS", "L-BFGS-B", "CG", "GD", "NM", "DE", "PSO"), accelerator = c("none", "Ramsay", "SQUAREM", "Zhou", "Anderson"), maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterium = c("ll", "l2", "l2_itemwise")),
+fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL, model = c("2PL", "RM", "3PL", "3PLu", "4PL"),
+  control = list(optimizer = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"), accelerator = c("none", "Ramsay", "SQUAREM", "Zhou"), maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterion = c("ll", "l2", "l2_itemwise")),
   algo_settings = list(err_tol = 1e-8, iter_max = 2000L, lbfgs_par_M = 10L,
     cg_method = c("FR", "PR", "FR-PR", "HS", "DY", "HZ"), cg_restart_threshold = 0.1,
     gd_method = c("Basic", "Momentum", "NAG", "AdaGrad", "RMSprop", "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax"),
@@ -9,27 +9,28 @@ fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
     pso_n_pop = 100L, pso_n_gen = 1000L, pso_check_freq = -1L, pso_inertia_method = c("ld", "dampening"), pso_par_w_min = 0.1, pso_par_w_max = 0.99, pso_par_w_damp = 0.99,
     pso_velocity_method = c("fw", "ld"), pso_par_c_cog = 2.0, pso_par_c_soc = 2.0, pso_par_initial_c_cog = 2.5, pso_par_final_c_cog = 0.5, pso_par_initial_c_soc = 0.5, pso_par_final_c_soc = 2.5))
 {
-  ## FIXME: push everything in C++ afterwards
+  ### FIXME: push everything in C++ afterwards
+  ### FIXME: set defaults as in simulation studies
 
   y <- as.matrix(y)
   M <- dim(y)[1]
   N <- dim(y)[2]
 
-  ## weights
+  ### weights
   weights <- if(is.null(weights)) {
     rep(1, M)
   } else {
     weights
   }
 
-  ## impact
+  ### impact
   impact <- if(is.null(impact)) {
     as.factor(rep("all", M))
   } else {
     impact
   }
 
-  ## start
+  ### start
   start <- if(is.null(start)) {
     as <- rep(0.851, N)
     ds <- qnorm(colMeans(y)) * 1.95
@@ -43,33 +44,39 @@ fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
     start
   }
 
-  ## EM and general control settings
-  Rcontrol <- list(optimizer = 0L, accelerator = 0L, maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterium = 0L)
+  ### model (starting from 0)
+  model <- as.integer(factor(match.arg(model,
+    c("2PL", "RM", "3PL", "3PLu", "4PL")),
+    levels = c("2PL", "RM", "3PL", "3PLu", "4PL"))) - 1L
 
-  ## optimizer (starting from 0)
+
+  ### EM and general control settings
+  Rcontrol <- list(optimizer = 0L, accelerator = 0L, maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterion = 0L)
+
+  ### optimizer (starting from 0)
   control$optimizer <- as.integer(factor(match.arg(control$optimizer,
-    c("Newton", "BFGS", "L-BFGS-B", "CG", "GD", "NM", "DE", "PSO")),
-    levels = c("Newton", "BFGS", "L-BFGS-B", "CG", "GD", "NM", "DE", "PSO"))) - 1L
+    c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO")),
+    levels = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"))) - 1L
 
-  ## accelerator (starting from 0)
+  ### accelerator (starting from 0)
   control$accelerator <- as.integer(factor(match.arg(control$accelerator,
-    c("none", "Ramsay", "SQUAREM", "Zhou", "Anderson")),
-    levels = c("none", "Ramsay", "SQUAREM", "Zhou", "Anderson"))) - 1L
+    c("none", "Ramsay", "SQUAREM", "Zhou")),
+    levels = c("none", "Ramsay", "SQUAREM", "Zhou"))) - 1L
 
-  ## maxit, reltol, Q, global
+  ### maxit, reltol, Q, global
 
-  ## criterium (starting from 0)
-  control$criterium <- as.integer(factor(match.arg(control$criterium,
+  ### criterion (starting from 0)
+  control$criterion <- as.integer(factor(match.arg(control$criterion,
     c("ll", "l2", "l2_itemwise")),
     levels = c("ll", "l2", "l2_itemwise"))) - 1L
 
   Rcontrol[names(control)] <- control
 
-  if(control$criterium == 2) {
+  if(control$criterion == 2) {
     Rcontrol$global <- FALSE
   }
 
-  ## optim algo settings
+  ### optim algo settings
   Ralgo_settings <- list(err_tol = 1e-8, iter_max = 2000L, lbfgs_par_M = 10L,
     cg_method = c("FR", "PR", "FR-PR", "HS", "DY", "HZ"), cg_restart_threshold = 0.1,
     gd_method = c("Basic", "Momentum", "NAG", "AdaGrad", "RMSprop", "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax"),
@@ -79,35 +86,35 @@ fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
     pso_n_pop = 100L, pso_n_gen = 1000L, pso_check_freq = -1L, pso_inertia_method = c("ld", "dampening"), pso_par_w_min = 0.1, pso_par_w_max = 0.99, pso_par_w_damp = 0.99,
     pso_velocity_method = c("fw", "ld"), pso_par_c_cog = 2.0, pso_par_c_soc = 2.0, pso_par_initial_c_cog = 2.5, pso_par_final_c_cog = 0.5, pso_par_initial_c_soc = 0.5, pso_par_final_c_soc = 2.5)
 
-  ## CG method (starting from 1)
+  ### CG method (starting from 1)
   algo_settings$cg_method <- as.integer(factor(match.arg(algo_settings$cg_method,
     c("FR", "PR", "FR-PR", "HS", "DY", "HZ")),
     levels = c("FR", "PR", "FR-PR", "HS", "DY", "HZ")))
 
-  ## GD method (starting from 0)
+  ### GD method (starting from 0)
   algo_settings$gd_method <- as.integer(factor(match.arg(algo_settings$gd_method,
     c("Basic", "Momentum", "NAG", "AdaGrad", "RMSprop", "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax")),
     levels = c("Basic", "Momentum", "NAG", "AdaGrad", "RMSprop", "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax"))) - 1L
 
-  ## DE mutation method (starting from 1)
+  ### DE mutation method (starting from 1)
   algo_settings$de_mutation_method <- as.integer(factor(match.arg(algo_settings$de_mutation_method,
     c("rand", "best")),
     levels = c("rand", "best")))
 
-  ## PSO inertia method (starting from 1)
+  ### PSO inertia method (starting from 1)
   algo_settings$pso_inertia_method <- as.integer(factor(match.arg(algo_settings$pso_inertia_method,
     c("ld", "dampening")),
     levels = c("ld", "dampening")))
 
-  ## PSO velocity method (starting from 1)
+  ### PSO velocity method (starting from 1)
   algo_settings$pso_velocity_method <- as.integer(factor(match.arg(algo_settings$pso_velocity_method,
     c("fw", "ld")),
     levels = c("fw", "ld")))
 
   Ralgo_settings[names(algo_settings)] <- algo_settings
 
-  ## fit
-  fit <- .Call("fit", y, weights, as.integer(impact) - 1, start, Rcontrol, Ralgo_settings)
+  ### fit
+  fit <- .Call("fit", y, weights, as.integer(impact) - 1, start, model, Rcontrol, Ralgo_settings)
 
   class(fit) <- "twopl"
 

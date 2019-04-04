@@ -1,7 +1,5 @@
 #include "var.hpp"
 
-// FIXME const
-
 // generate the first N prime numbers
 // FIXME faster version / check for primesieve
 arma::vec sonic::generatePrimes(const arma::uword N)
@@ -24,7 +22,6 @@ arma::vec sonic::generatePrimes(const arma::uword N)
   }
 
   return(primes);
-
 }
 
 
@@ -66,6 +63,4 @@ arma::mat sonic::preprocess(const arma::mat& y, const arma::vec& weights,
   y_u = y.rows(pid_unique);
 
   return(rgl);
-
 }
-

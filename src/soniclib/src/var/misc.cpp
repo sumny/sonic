@@ -29,6 +29,4 @@ arma::mat sonic::solve(const arma::mat& H)
   }
 
   return(H_);
-
 }
-

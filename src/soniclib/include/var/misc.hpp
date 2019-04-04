@@ -5,4 +5,3 @@
 arma::mat solve(const arma::mat& H);
 
 #endif
-

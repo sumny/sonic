@@ -1,5 +1,5 @@
 # sonic Makevars
-# FIXME get OPENMP right; currently disabled
+# FIXME fully implement OPENMP; currently disabled
 # FIXME move own files directly to src directory
 
 SDIR= .
@@ -7,8 +7,8 @@ sonic_DIR= $(SDIR)/soniclib
 sonic_SRC_DIR= $(sonic_DIR)/src
 sonic_HEADER_DIR= $(sonic_DIR)/include
 
-sonic_OPENMP= -DARMA_DONT_USE_OPENMP -DOPTIM_DONT_USE_OPENMP
-#sonic_OPENMP= $(SHLIB_OPENMP_CXXFLAGS) -DARMA_USE_OPENMP -DOPTIM_USE_OPENMP
+#sonic_OPENMP= -DARMA_DONT_USE_OPENMP -DOPTIM_DONT_USE_OPENMP
+sonic_OPENMP= $(SHLIB_OPENMP_CXXFLAGS) -DARMA_USE_OPENMP -DOPTIM_USE_OPENMP
 
 PKG_CPPFLAGS= $(CXX11STD) $(sonic_OPENMP) -DUSE_RCPP_ARMADILLO -DARMA_NO_DEBUG -I./soniclib/include/ -I./soniclib/include/optim -I./soniclib/include/var
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
@@ -30,7 +30,7 @@ OBJECTS_sonic= $(OBJECTS_OPTIM) $(OBJECTS_VAR)
 
 all: $(SHLIB) libsonic$(SHLIB_EXT)
 
-libsonic$(SHLIB_EXT): $(OBJECTS_sonic)
-	$(SHLIB_CXX11LD) $(SHLIB_CXX11LDFLAGS) -o sonic$(SHLIB_EXT) $(OBJECTS_sonic) $(ALL_LIBS)
 #libsonic$(SHLIB_EXT): $(OBJECTS_sonic)
-	#$(SHLIB_CXX11LD) $(SHLIB_OPENMP_CXXFLAGS) $(SHLIB_CXX11LDFLAGS) -o sonic$(SHLIB_EXT) $(OBJECTS_sonic) $(ALL_LIBS)
+	#$(SHLIB_CXX11LD) $(SHLIB_CXX11LDFLAGS) -o sonic$(SHLIB_EXT) $(OBJECTS_sonic) $(ALL_LIBS)
+libsonic$(SHLIB_EXT): $(OBJECTS_sonic)
+	$(SHLIB_CXX11LD) $(SHLIB_OPENMP_CXXFLAGS) $(SHLIB_CXX11LDFLAGS) -o sonic$(SHLIB_EXT) $(OBJECTS_sonic) $(ALL_LIBS)

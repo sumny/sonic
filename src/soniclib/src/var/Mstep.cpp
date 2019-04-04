@@ -1,9 +1,6 @@
 #include "optim/optim.hpp"
 #include "var.hpp"
 
-// FIXME fix pointer syntax stuff
-// FIXME const
-
 // Mstep items
 bool sonic::Mstep_items(arma::vec& ipars, const bool global, const arma::uword optimizer, const arma::uword N, const arma::cube& rj_g, const arma::uvec& itemopt, sonic::Mstep_data_g *opt_data_g, sonic::Mstep_data_g_wh *opt_data_g_wh, sonic::Mstep_data_i *opt_data_i, sonic::Mstep_data_i_wh *opt_data_i_wh, optim::algo_settings_t& settings)
 {
@@ -72,7 +69,6 @@ bool sonic::Mstep_items(arma::vec& ipars, const bool global, const arma::uword o
   }
 
   return(converged);
-
 }
 
 
@@ -106,40 +102,38 @@ double sonic::llfun_i_wh(const arma::vec &pars_in, arma::vec *grad_out, arma::ma
   // structure Mstep_data_i_wh
   sonic::Mstep_data_i_wh* objfn_data = reinterpret_cast<sonic::Mstep_data_i_wh*>(opt_data);
 
-  // probs = (log) probability solving (1) and not solving (0) item j given quadratures (Q x 2)
-  (objfn_data->probs).col(1) = arma::pow(1 + arma::trunc_exp(- (objfn_data->X * pars_in(0) + pars_in(1))), -1);
-  (objfn_data->probs).col(0) = 1 - (objfn_data->probs).col(1);
+  ((*objfn_data).probs).col(1) = arma::pow(1 + arma::trunc_exp(- ((*objfn_data).X * pars_in(0) + pars_in(1))), -1);
+  ((*objfn_data).probs).col(0) = 1 - ((*objfn_data).probs).col(1);
 
   if(grad_out) {
-    (objfn_data->gr_out).zeros();
-    for(arma::uword g = 0; g < objfn_data->G; ++g) {
-      objfn_data->gr_tmp = ((objfn_data->rj_g).slice(g)).col(1) - (arma::sum((objfn_data->rj_g).slice(g), 1) % (objfn_data->probs).col(1));
-      (objfn_data->gr_out)(0) += arma::accu(objfn_data->gr_tmp % objfn_data->X);
-      (objfn_data->gr_out)(1) += arma::accu(objfn_data->gr_tmp);
+    ((*objfn_data).gr_out).zeros();
+    for(arma::uword g = 0; g < (*objfn_data).G; ++g) {
+      (*objfn_data).gr_tmp = (((*objfn_data).rj_g).slice(g)).col(1) - (arma::sum(((*objfn_data).rj_g).slice(g), 1) % ((*objfn_data).probs).col(1));
+      ((*objfn_data).gr_out)(0) += arma::accu((*objfn_data).gr_tmp % (*objfn_data).X);
+      ((*objfn_data).gr_out)(1) += arma::accu((*objfn_data).gr_tmp);
     }
-  *grad_out = - objfn_data->gr_out;
+  *grad_out = - (*objfn_data).gr_out;
   }
 
   if(hess_out) {
-    (objfn_data->hess_out).zeros();
-    objfn_data->W_tmp = (objfn_data->probs).col(1) % (objfn_data->probs).col(0);
-    for(arma::uword g = 0; g < objfn_data->G; ++g) {
-      (objfn_data->hess_out)(0, 0) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), 1) % objfn_data->W_tmp % arma::square(objfn_data->X));
-      (objfn_data->hess_out)(0, 1) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), 1) % objfn_data->W_tmp % objfn_data->X);
-      (objfn_data->hess_out)(1, 1) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), 1) % objfn_data->W_tmp);
+    ((*objfn_data).hess_out).zeros();
+    (*objfn_data).W_tmp = ((*objfn_data).probs).col(1) % ((*objfn_data).probs).col(0);
+    for(arma::uword g = 0; g < (*objfn_data).G; ++g) {
+      ((*objfn_data).hess_out)(0, 0) += arma::accu(arma::sum(((*objfn_data).rj_g).slice(g), 1) % (*objfn_data).W_tmp % arma::square((*objfn_data).X));
+      ((*objfn_data).hess_out)(0, 1) += arma::accu(arma::sum(((*objfn_data).rj_g).slice(g), 1) % (*objfn_data).W_tmp % (*objfn_data).X);
+      ((*objfn_data).hess_out)(1, 1) += arma::accu(arma::sum(((*objfn_data).rj_g).slice(g), 1) % (*objfn_data).W_tmp);
     }
-  (objfn_data->hess_out)(1, 0) += (objfn_data->hess_out)(0, 1);
-  *hess_out = objfn_data->hess_out;
+  ((*objfn_data).hess_out)(1, 0) += ((*objfn_data).hess_out)(0, 1);
+  *hess_out = (*objfn_data).hess_out;
   }
 
-  objfn_data->probs = arma::trunc_log(objfn_data->probs);
-  objfn_data->ll = arma::accu((objfn_data->rj_g).slice(0) % objfn_data->probs);
-  for(arma::uword g = 1; g < objfn_data->G; ++g) {
-    objfn_data->ll += arma::accu((objfn_data->rj_g).slice(g) % objfn_data->probs);
+  (*objfn_data).probs = arma::trunc_log((*objfn_data).probs);
+  (*objfn_data).ll = arma::accu(((*objfn_data).rj_g).slice(0) % (*objfn_data).probs);
+  for(arma::uword g = 1; g < (*objfn_data).G; ++g) {
+    (*objfn_data).ll += arma::accu(((*objfn_data).rj_g).slice(g) % (*objfn_data).probs);
   }
 
-  return(- objfn_data->ll);
-
+  return(- (*objfn_data).ll);
 }
 
 
@@ -150,28 +144,26 @@ double sonic::llfun_i(const arma::vec &pars_in, arma::vec *grad_out, void *opt_d
   // structure Mstep_data_i
   sonic::Mstep_data_i* objfn_data = reinterpret_cast<sonic::Mstep_data_i*>(opt_data);
 
-  // probs = (log) probability solving (1) and not solving (0) item j given quadratures (Q x 2)
-  (objfn_data->probs).col(1) = arma::pow(1 + arma::trunc_exp(- (objfn_data->X * pars_in(0) + pars_in(1))), -1);
-  (objfn_data->probs).col(0) = 1 - (objfn_data->probs).col(1);
+  ((*objfn_data).probs).col(1) = arma::pow(1 + arma::trunc_exp(- ((*objfn_data).X * pars_in(0) + pars_in(1))), -1);
+  ((*objfn_data).probs).col(0) = 1 - ((*objfn_data).probs).col(1);
 
   if(grad_out) {
-    (objfn_data->gr_out).zeros();
-    for(arma::uword g = 0; g < objfn_data->G; ++g) {
-      objfn_data->gr_tmp = ((objfn_data->rj_g).slice(g)).col(1) - (arma::sum((objfn_data->rj_g).slice(g), 1) % (objfn_data->probs).col(1));
-      (objfn_data->gr_out)(0) += arma::accu(objfn_data->gr_tmp % objfn_data->X);
-      (objfn_data->gr_out)(1) += arma::accu(objfn_data->gr_tmp);
+    ((*objfn_data).gr_out).zeros();
+    for(arma::uword g = 0; g < (*objfn_data).G; ++g) {
+      (*objfn_data).gr_tmp = (((*objfn_data).rj_g).slice(g)).col(1) - (arma::sum(((*objfn_data).rj_g).slice(g), 1) % ((*objfn_data).probs).col(1));
+      ((*objfn_data).gr_out)(0) += arma::accu((*objfn_data).gr_tmp % (*objfn_data).X);
+      ((*objfn_data).gr_out)(1) += arma::accu((*objfn_data).gr_tmp);
     }
-  *grad_out = - objfn_data->gr_out;
+  *grad_out = - (*objfn_data).gr_out;
+  }
+  
+  (*objfn_data).probs = arma::trunc_log((*objfn_data).probs);
+  (*objfn_data).ll = arma::accu(((*objfn_data).rj_g).slice(0) % (*objfn_data).probs);
+  for(arma::uword g = 1; g < (*objfn_data).G; ++g) {
+    (*objfn_data).ll += arma::accu(((*objfn_data).rj_g).slice(g) % (*objfn_data).probs);
   }
 
-  objfn_data->probs = arma::trunc_log(objfn_data->probs);
-  objfn_data->ll = arma::accu((objfn_data->rj_g).slice(0) % objfn_data->probs);
-  for(arma::uword g = 1; g < objfn_data->G; ++g) {
-    objfn_data->ll += arma::accu((objfn_data->rj_g).slice(g) % objfn_data->probs);
-  }
-
-  return(- objfn_data->ll);
-
+  return(- (*objfn_data).ll);
 }
 
 
@@ -183,46 +175,45 @@ double sonic::llfun_g_wh(const arma::vec &pars_in, arma::vec *grad_out, arma::ma
   sonic::Mstep_data_g_wh* objfn_data = reinterpret_cast<sonic::Mstep_data_g_wh*>(opt_data);
 
   // FIXME easier
-  objfn_data->Prob = objfn_data->X * pars_in(objfn_data->a_ind).t();
-  (objfn_data->Prob).each_row() += pars_in(objfn_data->d_ind).t();
-  objfn_data->Prob = arma::pow(1 + arma::trunc_exp(- (objfn_data->Prob)), -1);
-  (objfn_data->Probs).cols(objfn_data->z_ind) = 1 - objfn_data->Prob;
-  (objfn_data->Probs).cols(objfn_data->o_ind) = objfn_data->Prob;
+  (*objfn_data).Prob = (*objfn_data).X * pars_in((*objfn_data).a_ind).t();
+  ((*objfn_data).Prob).each_row() += pars_in((*objfn_data).d_ind).t();
+  (*objfn_data).Prob = arma::pow(1 + arma::trunc_exp(- ((*objfn_data).Prob)), -1);
+  ((*objfn_data).Probs).cols((*objfn_data).z_ind) = 1 - (*objfn_data).Prob;
+  ((*objfn_data).Probs).cols((*objfn_data).o_ind) = (*objfn_data).Prob;
 
   if(grad_out) {
-    (objfn_data->gr_out).zeros();
-    for(arma::uword g = 0; g < objfn_data->G; ++g) {
+    ((*objfn_data).gr_out).zeros();
+    for(arma::uword g = 0; g < (*objfn_data).G; ++g) {
       // FIXME easier
-      objfn_data->gr_tmp = ((objfn_data->rj_g).slice(g)).cols(objfn_data->o_ind) - ((((objfn_data->rj_g).slice(g)).cols(objfn_data->z_ind) + ((objfn_data->rj_g).slice(g)).cols(objfn_data->o_ind)) % (objfn_data->Probs).cols(objfn_data->o_ind));
-      (objfn_data->gr_out)(objfn_data->d_ind) += arma::sum((objfn_data->gr_tmp), 0);
-      (objfn_data->gr_tmp).each_col() %= objfn_data->X;
-      (objfn_data->gr_out)(objfn_data->a_ind) += arma::sum((objfn_data->gr_tmp), 0);
+      (*objfn_data).gr_tmp = (((*objfn_data).rj_g).slice(g)).cols((*objfn_data).o_ind) - (((((*objfn_data).rj_g).slice(g)).cols((*objfn_data).z_ind) + (((*objfn_data).rj_g).slice(g)).cols((*objfn_data).o_ind)) % ((*objfn_data).Probs).cols((*objfn_data).o_ind));
+      ((*objfn_data).gr_out)((*objfn_data).d_ind) += arma::sum(((*objfn_data).gr_tmp), 0);
+      ((*objfn_data).gr_tmp).each_col() %= (*objfn_data).X;
+      ((*objfn_data).gr_out)((*objfn_data).a_ind) += arma::sum(((*objfn_data).gr_tmp), 0);
     }
-    *grad_out = - objfn_data->gr_out;
+    *grad_out = - (*objfn_data).gr_out;
   }
 
   if(hess_out) {
-    (objfn_data->hess_out).zeros();
-    objfn_data->W_tmp = (objfn_data->Probs).cols(objfn_data->o_ind) % (objfn_data->Probs).cols(objfn_data->z_ind);
-    for(arma::uword g = 0; g < objfn_data->G; ++g) {
-      objfn_data->n_vec.for_each( [&objfn_data, &g](const arma::uword &j) {
-        (objfn_data->hess_out)(2 * j, 2 * j) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), (2 * j) + 1) % objfn_data->W_tmp % arma::square(objfn_data->X));
-        (objfn_data->hess_out)(2 * j, (2 * j) + 1) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), (2 * j) + 1) % objfn_data->W_tmp % objfn_data->X);
-        (objfn_data->hess_out)((2 * j) + 1, 2 * j) += (objfn_data->hess_out)(2 * j, (2 * j) + 1);
-        (objfn_data->hess_out)((2 * j) + 1, (2 * j) + 1) += arma::accu(arma::sum((objfn_data->rj_g).slice(g), (2 * j) + 1) % objfn_data->W_tmp);
+    ((*objfn_data).hess_out).zeros();
+    (*objfn_data).W_tmp = ((*objfn_data).Probs).cols((*objfn_data).o_ind) % ((*objfn_data).Probs).cols((*objfn_data).z_ind);
+    for(arma::uword g = 0; g < (*objfn_data).G; ++g) {
+      (*objfn_data).n_vec.for_each( [&objfn_data, &g](const arma::uword &j) {
+        ((*objfn_data).hess_out)(2 * j, 2 * j) += arma::accu(arma::sum(((*objfn_data).rj_g).slice(g), (2 * j) + 1) % (*objfn_data).W_tmp % arma::square((*objfn_data).X));
+        ((*objfn_data).hess_out)(2 * j, (2 * j) + 1) += arma::accu(arma::sum(((*objfn_data).rj_g).slice(g), (2 * j) + 1) % (*objfn_data).W_tmp % (*objfn_data).X);
+        ((*objfn_data).hess_out)((2 * j) + 1, 2 * j) += ((*objfn_data).hess_out)(2 * j, (2 * j) + 1);
+        ((*objfn_data).hess_out)((2 * j) + 1, (2 * j) + 1) += arma::accu(arma::sum(((*objfn_data).rj_g).slice(g), (2 * j) + 1) % (*objfn_data).W_tmp);
       });
     }
-  *hess_out = objfn_data->hess_out;
+  *hess_out = (*objfn_data).hess_out;
   }
 
-  objfn_data->Probs = arma::trunc_log(objfn_data->Probs);
-  objfn_data->ll = arma::accu((objfn_data->rj_g).slice(0) % objfn_data->Probs);
-  for(arma::uword g = 1; g < objfn_data->G; ++g) {
-     objfn_data->ll += arma::accu((objfn_data->rj_g).slice(g) % objfn_data->Probs);
+  (*objfn_data).Probs = arma::trunc_log((*objfn_data).Probs);
+  (*objfn_data).ll = arma::accu(((*objfn_data).rj_g).slice(0) % (*objfn_data).Probs);
+  for(arma::uword g = 1; g < (*objfn_data).G; ++g) {
+     (*objfn_data).ll += arma::accu(((*objfn_data).rj_g).slice(g) % (*objfn_data).Probs);
   }
   
-  return(- objfn_data->ll);
-
+  return(- (*objfn_data).ll);
 }
 
 
@@ -234,31 +225,29 @@ double sonic::llfun_g(const arma::vec &pars_in, arma::vec *grad_out, void *opt_d
   sonic::Mstep_data_g* objfn_data = reinterpret_cast<sonic::Mstep_data_g*>(opt_data);
 
   // FIXME easier
-  objfn_data->Prob = objfn_data->X * pars_in(objfn_data->a_ind).t();
-  (objfn_data->Prob).each_row() += pars_in(objfn_data->d_ind).t();
-  objfn_data->Prob = arma::pow(1 + arma::trunc_exp(- (objfn_data->Prob)), -1);
-  (objfn_data->Probs).cols(objfn_data->z_ind) = 1 - objfn_data->Prob;
-  (objfn_data->Probs).cols(objfn_data->o_ind) = objfn_data->Prob;
+  (*objfn_data).Prob = (*objfn_data).X * pars_in((*objfn_data).a_ind).t();
+  ((*objfn_data).Prob).each_row() += pars_in((*objfn_data).d_ind).t();
+  (*objfn_data).Prob = arma::pow(1 + arma::trunc_exp(- ((*objfn_data).Prob)), -1);
+  ((*objfn_data).Probs).cols((*objfn_data).z_ind) = 1 - (*objfn_data).Prob;
+  ((*objfn_data).Probs).cols((*objfn_data).o_ind) = (*objfn_data).Prob;
 
   if(grad_out) {
-    (objfn_data->gr_out).zeros();
-    for(arma::uword g = 0; g < objfn_data->G; ++g) {
+    ((*objfn_data).gr_out).zeros();
+    for(arma::uword g = 0; g < (*objfn_data).G; ++g) {
       // FIXME easier
-      objfn_data->gr_tmp = ((objfn_data->rj_g).slice(g)).cols(objfn_data->o_ind) - ((((objfn_data->rj_g).slice(g)).cols(objfn_data->z_ind) + ((objfn_data->rj_g).slice(g)).cols(objfn_data->o_ind)) % (objfn_data->Probs).cols(objfn_data->o_ind));
-      (objfn_data->gr_out)(objfn_data->d_ind) += arma::sum((objfn_data->gr_tmp), 0);
-      (objfn_data->gr_tmp).each_col() %= objfn_data->X;
-      (objfn_data->gr_out)(objfn_data->a_ind) += arma::sum((objfn_data->gr_tmp), 0);
+      (*objfn_data).gr_tmp = (((*objfn_data).rj_g).slice(g)).cols((*objfn_data).o_ind) - (((((*objfn_data).rj_g).slice(g)).cols((*objfn_data).z_ind) + (((*objfn_data).rj_g).slice(g)).cols((*objfn_data).o_ind)) % ((*objfn_data).Probs).cols((*objfn_data).o_ind));
+      ((*objfn_data).gr_out)((*objfn_data).d_ind) += arma::sum(((*objfn_data).gr_tmp), 0);
+      ((*objfn_data).gr_tmp).each_col() %= (*objfn_data).X;
+      ((*objfn_data).gr_out)((*objfn_data).a_ind) += arma::sum(((*objfn_data).gr_tmp), 0);
     }
-    *grad_out = - objfn_data->gr_out;
+    *grad_out = - (*objfn_data).gr_out;
   }
 
-  objfn_data->Probs = arma::trunc_log(objfn_data->Probs);
-  objfn_data->ll = arma::accu((objfn_data->rj_g).slice(0) % objfn_data->Probs);
-  for(arma::uword g = 1; g < objfn_data->G; ++g) {
-     objfn_data->ll += arma::accu((objfn_data->rj_g).slice(g) % objfn_data->Probs);
+  (*objfn_data).Probs = arma::trunc_log((*objfn_data).Probs);
+  (*objfn_data).ll = arma::accu(((*objfn_data).rj_g).slice(0) % (*objfn_data).Probs);
+  for(arma::uword g = 1; g < (*objfn_data).G; ++g) {
+     (*objfn_data).ll += arma::accu(((*objfn_data).rj_g).slice(g) % (*objfn_data).Probs);
   }
   
-  return(- objfn_data->ll);
-
+  return(- (*objfn_data).ll);
 }
-

@@ -1,43 +1,44 @@
+#include <cmath>
+#include <math.h>
 //#include <omp.h>
 #include "optim/optim.hpp"
-#include "var/var.hpp"
-#include <math.h>
-#include <RcppArmadillo.h>
 #include <Rcpp/Benchmark/Timer.h>
-#include <time.h>
+#include <RcppArmadillo.h>
+//#include <time.h>
 #include <utility>
+#include "var/var.hpp"
 
 // fit function
-// FIXME replace arma::accu and arma::sum with matrix multiplication, arma::norm
 // FIXME check order of arguments in all functions etc. and rearrange if needed
 // FIXME faster way for G = 1
 // FIXME reduce maxit = 0 time
-// FIXME get OPENMP right; currently disabled
-// FIXME check iteration sequences
-// FIXME check which par vectors needed
-// FIXME L-BFGS-B and infinite values 
+// FIXME fully implement OPENMP; currently disabled
+// FIXME check which par vectors are needed
+// FIXME infinite values in optimization
 // FIXME NA values
-// FIXME probs function in misc.cpp?
-RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcontrol, SEXP Ralgo_settings)
+// FIXME probs function in misc.cpp
+RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmodel, SEXP Rcontrol, SEXP Ralgo_settings)
 {
   BEGIN_RCPP
 
   Rcpp::Timer timer;
   timer.step("start");
 
-  // initial const declarations
+  // initial (const) declarations
   // FIXME try to use one-liners
   const arma::mat y = Rcpp::as<arma::mat>(Ry);
   const arma::vec weights = Rcpp::as<arma::vec>(Rweights);
   const arma::uvec impact = Rcpp::as<arma::uvec>(Rimpact);
   const arma::uvec groups = arma::unique(impact);
   const Rcpp::List start = Rcpp::as<Rcpp::List>(Rstart);
+  const arma::uword model = Rcpp::as<arma::uword>(Rmodel); // 0 == "2PL", 1 == "RM", 2 == "3PL", 3 == "3PLu", 4 == "4PL"
   const Rcpp::List control = Rcpp::as<Rcpp::List>(Rcontrol);
   const Rcpp::List algo_settings = Rcpp::as<Rcpp::List>(Ralgo_settings);
   const arma::uword M = y.n_rows, N = y.n_cols, G = groups.n_elem;
-  const arma::uword optimizer = Rcpp::as<arma::uword>(control[0]), accelerator = Rcpp::as<arma::uword>(control[1]), maxit = Rcpp::as<arma::uword>(control[2]), Q = Rcpp::as<arma::uword>(control[4]), criterium = Rcpp::as<arma::uword>(control[6]);
-  const double reltol = Rcpp::as<double>(control[3]);
+  const arma::uword optimizer = Rcpp::as<arma::uword>(control[0]), accelerator = Rcpp::as<arma::uword>(control[1]), maxit = Rcpp::as<arma::uword>(control[2]), Q = Rcpp::as<arma::uword>(control[4]), criterion = Rcpp::as<arma::uword>(control[6]);
   const bool global = Rcpp::as<bool>(control[5]);
+  const double reltol = Rcpp::as<double>(control[3]);
+  const bool compute_ll = (criterion == 0);
   timer.step("declarations");
 
   // unique patterns
@@ -134,54 +135,48 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
   }
 
   // optim algo settings
-  // FIXME Rcpp::as
   optim::algo_settings_t settings;
-  settings.err_tol = algo_settings[0];
-  settings.iter_max = algo_settings[1];
-  settings.lbfgs_par_M = algo_settings[2];
-  settings.cg_method = algo_settings[3];
-  settings.cg_restart_threshold = algo_settings[4];
-  settings.gd_method = algo_settings[5];
-  settings.nm_par_alpha = algo_settings[6];
-  settings.nm_par_beta = algo_settings[7];
-  settings.nm_par_gamma = algo_settings[8];
-  settings.nm_par_delta = algo_settings[9];
-  settings.gd_settings.step_size = algo_settings[10];
-  settings.gd_settings.momentum_par = algo_settings[11];
-  settings.gd_settings.norm_term = algo_settings[12];
-  settings.gd_settings.ada_rho = algo_settings[13];
-  settings.gd_settings.adam_beta_1 = algo_settings[14];
-  settings.gd_settings.adam_beta_2 = algo_settings[15];
-  settings.gd_settings.ada_max = algo_settings[16];
-  settings.de_n_pop = algo_settings[17];
-  settings.de_n_gen = algo_settings[18];
-  settings.de_check_freq = algo_settings[19];
-  settings.de_mutation_method = algo_settings[20];
-  settings.de_par_F = algo_settings[21];
-  settings.de_par_CR = algo_settings[22];
-  settings.pso_n_pop = algo_settings[23];
-  settings.pso_n_gen = algo_settings[24];
+  settings.err_tol = Rcpp::as<double>(algo_settings[0]);
+  settings.iter_max = Rcpp::as<int>(algo_settings[1]);
+  settings.lbfgs_par_M = Rcpp::as<int>(algo_settings[2]);
+  settings.cg_method = Rcpp::as<int>(algo_settings[3]);
+  settings.cg_restart_threshold = Rcpp::as<double>(algo_settings[4]);
+  settings.gd_method = Rcpp::as<int>(algo_settings[5]);
+  settings.nm_par_alpha = Rcpp::as<double>(algo_settings[6]);
+  settings.nm_par_beta = Rcpp::as<double>(algo_settings[7]);
+  settings.nm_par_gamma = Rcpp::as<double>(algo_settings[8]);
+  settings.nm_par_delta = Rcpp::as<double>(algo_settings[9]);
+  settings.gd_settings.step_size = Rcpp::as<double>(algo_settings[10]);
+  settings.gd_settings.momentum_par = Rcpp::as<double>(algo_settings[11]);
+  settings.gd_settings.norm_term = Rcpp::as<double>(algo_settings[12]);
+  settings.gd_settings.ada_rho = Rcpp::as<double>(algo_settings[13]);
+  settings.gd_settings.adam_beta_1 = Rcpp::as<double>(algo_settings[14]);
+  settings.gd_settings.adam_beta_2 = Rcpp::as<double>(algo_settings[15]);
+  settings.gd_settings.ada_max = Rcpp::as<bool>(algo_settings[16]);
+  settings.de_n_pop = Rcpp::as<int>(algo_settings[17]);
+  settings.de_n_gen = Rcpp::as<int>(algo_settings[18]);
+  settings.de_check_freq = Rcpp::as<int>(algo_settings[19]);
+  settings.de_mutation_method = Rcpp::as<int>(algo_settings[20]);
+  settings.de_par_F = Rcpp::as<double>(algo_settings[21]);
+  settings.de_par_CR = Rcpp::as<double>(algo_settings[22]);
+  settings.pso_n_pop = Rcpp::as<int>( algo_settings[23]);
+  settings.pso_n_gen = Rcpp::as<int>(algo_settings[24]);
   // FIXME check this
-  //settings.de_check_freq = algo_settings[25];
-  settings.pso_inertia_method = algo_settings[26];
-  settings.pso_par_w_min = algo_settings[27];
-  settings.pso_par_w_max = algo_settings[28];
-  settings.pso_par_w_damp = algo_settings[29];
-  settings.pso_velocity_method = algo_settings[30];
-  settings.pso_par_c_cog = algo_settings[31];
-  settings.pso_par_c_soc = algo_settings[32];
-  settings.pso_par_initial_c_cog = algo_settings[33];
-  settings.pso_par_final_c_cog = algo_settings[34];
-  settings.pso_par_initial_c_soc = algo_settings[35];
-  settings.pso_par_final_c_soc = algo_settings[36];
-
-  timer.step("preE1");
-  sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind);
-  timer.step("postE1");
+  //settings.pso_check_freq = algo_settings[25];
+  settings.pso_inertia_method = Rcpp::as<int>(algo_settings[26]);
+  settings.pso_par_w_min = Rcpp::as<double>(algo_settings[27]);
+  settings.pso_par_w_max = Rcpp::as<double>(algo_settings[28]);
+  settings.pso_par_w_damp = Rcpp::as<double>(algo_settings[29]);
+  settings.pso_velocity_method = Rcpp::as<int>(algo_settings[30]);
+  settings.pso_par_c_cog = Rcpp::as<double>(algo_settings[31]);
+  settings.pso_par_c_soc = Rcpp::as<double>(algo_settings[32]);
+  settings.pso_par_initial_c_cog = Rcpp::as<double>(algo_settings[33]);
+  settings.pso_par_final_c_cog = Rcpp::as<double>(algo_settings[34]);
+  settings.pso_par_initial_c_soc = Rcpp::as<double>(algo_settings[35]);
+  settings.pso_par_final_c_soc = Rcpp::as<double>(algo_settings[36]);
 
   // accelerator stuff
-  arma::vec preM3 = ipars;
-  arma::vec preM2 = preM3;
+  arma::vec preM2 = ipars;
   arma::vec preM1 = preM2;
   arma::mat U(2 * N, 3, arma::fill::zeros);
   arma::mat V(2 * N, 3, arma::fill::zeros);
@@ -200,8 +195,12 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
   //double ll = sonic::llfun_g(ipars, &gradient_g, &opt_data_g);
   //run = false;
 
+  timer.step("preE1");
+  sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, true);
+  timer.step("postE1");
+
   // run simulations only 60 seconds CPU time (see bottom of the loop)
-  std::clock_t extra_time = std::clock();
+  //std::clock_t extra_time = std::clock();
 
   // EM
   if(maxit > 0) {
@@ -218,56 +217,58 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
       }
       timer.step("postM");
 
-      // EM acceleration, 0 == "none", 1 == "Ramsay", 2 == "SQUAREM", 3 == "Zhou", 4 == "Anderson"
+      // EM acceleration, 0 == "none", 1 == "Ramsay", 2 == "SQUAREM", 3 == "Zhou"
       timer.step("preA");
-      sonic::accelerate(y_u, y_u_, rgl, N, G, P, Q, ipars, X, AX, p_vec, n_vec, a_ind, d_ind, preM1, preM2, accelerator, ll, mk, Fdiff, Xdiff, fnew, fold, xnew, xold, U, V, iter);
+      sonic::accelerate(y_u, y_u_, rgl, N, G, P, Q, ipars, X, AX, p_vec, n_vec, a_ind, d_ind, preM1, preM2, accelerator, ll, U, V, iter);
       timer.step("postA");
 
       timer.step("preE");
-      sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind);
+      sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, compute_ll);
       ll_new = ll;
       timer.step("postE");
 
-      // termination criterium, 0 == "ll", 1 == "l2", 2 == "l2_itemwise"
+      // termination criterion, 0 == "ll", 1 == "l2", 2 == "l2_itemwise"
       // FIXME seperate function for termination
-      if(criterium == 0) {
+      if(criterion == 0) {
         critval = ll_new - ll_old;
-      } else if(criterium == 1) {
-        critval = std::sqrt(arma::accu(arma::square(ipars - preM1)));
-      } else if(criterium == 2) {
+      } else if(criterion == 1) {
+        critval = arma::norm(ipars - preM1, 2);
+      } else if(criterion == 2) {
         // FIXME check this
-        n_vec.for_each( [&itemnrm, &ipars, &preM1, &item_ind, &itemopt, &reltol](const arma::uword &j) {
+        n_vec.for_each( [&itemnrm, &ipars, &preM1, &item_ind, &itemopt, &reltol, &N](const arma::uword &j) {
           item_ind(0) = j;
           item_ind(1) = j + 1;
-          itemnrm(j) = std::sqrt(arma::accu(arma::square(ipars.elem(item_ind) - preM1.elem(item_ind))));
-          if(itemnrm(j) < reltol) {
+          itemnrm(j) = arma::norm(ipars.elem(item_ind) - preM1.elem(item_ind), 2);
+          if(itemnrm(j) <= (reltol / N)) {
             itemopt(j) = 0;
           }
         });
-        // FIXME set this to the highest norm
         if(arma::accu(itemopt) == 0) {
-          critval = 0;
+          critval = arma::accu(itemnrm);
         } else {
           critval = reltol + 1;
         }
       }
 
       // check for termination
-      if((critval < reltol) || (iter == maxit) || (((std::clock() - extra_time) / (double) CLOCKS_PER_SEC) >= 60)) {
+      //if((std::abs(critval) <= reltol) || (iter == maxit) || (((std::clock() - extra_time) / (double) CLOCKS_PER_SEC) >= 60)) {
+      if((std::abs(critval) <= reltol) || (iter == maxit)) {
         run = false;
+        if(criterion != 0) {
+          sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, true);
+          ll_new = ll;
+        }
       } else {
-        preM3 = preM2;
         preM2 = preM1;
         preM1 = ipars;
       }
-
     }
   } else {
     ll_new = ll;
     convergence = convergence[0];
   }
 
-  double converged = critval <= reltol;
+  double converged = ((std::abs(critval) <= reltol) && iter < maxit);
 
   timer.step("stop");
   Rcpp::NumericVector time(timer);
@@ -278,12 +279,14 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
   ret["sg"] = Rcpp::wrap(sg);
   ret["iter"] = Rcpp::wrap(iter);
   ret["ll"] = Rcpp::wrap(ll_new);
-  ret["converged"] = Rcpp::wrap(converged);
   ret["convergence"] = Rcpp::wrap(convergence[Rcpp::Range(0, iter - 1)]);
+  ret["converged"] = Rcpp::wrap(converged);
   ret["critval"] = Rcpp::wrap(critval);
   ret["y_u"] = Rcpp::wrap(y_u);
   ret["rgl"] = Rcpp::wrap(rgl);
   ret["time"] = Rcpp::wrap(time);
+  ret["test1"] = Rcpp::wrap(std::sqrt(arma::accu(arma::square(ipars))));
+  ret["test2"] = Rcpp::wrap(arma::norm(ipars, 2));
   // debug stuff
   //ret["debug_ll"] = Rcpp::wrap(ll);
   //ret["debug_gr"] = Rcpp::wrap(gradient_g);
@@ -301,7 +304,7 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rcon
 // Register native routines
 // tools::package_native_routine_registration_skeleton("sonic")
 static const R_CallMethodDef CallEntries[] = {
-  {"fit", (DL_FUNC) &fit, 6},
+  {"fit", (DL_FUNC) &fit, 7},
   {NULL, NULL, 0}
 };
 
@@ -312,4 +315,3 @@ void R_init_sonic(DllInfo *dll)
   R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
   R_useDynamicSymbols(dll, FALSE);
 }
-

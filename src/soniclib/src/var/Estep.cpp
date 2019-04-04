@@ -1,7 +1,7 @@
 #include "var.hpp"
 
 // Estep
-void sonic::Estep(const arma::mat& y_u, const arma::mat& y_u_, const arma::mat& rgl, const arma::uword G, const arma::vec& ipars, const arma::vec& X, const arma::mat& AX, double& ll, arma::mat& pul, arma::mat& pgul, arma::cube& rj_g, const arma::uvec& p_vec, const arma::uvec& n_vec, const arma::uvec& a_ind, const arma::uvec& d_ind)
+void sonic::Estep(const arma::mat& y_u, const arma::mat& y_u_, const arma::mat& rgl, const arma::uword G, const arma::vec& ipars, const arma::vec& X, const arma::mat& AX, double& ll, arma::mat& pul, arma::mat& pgul, arma::cube& rj_g, const arma::uvec& p_vec, const arma::uvec& n_vec, const arma::uvec& a_ind, const arma::uvec& d_ind, const bool compute_ll)
 {
   // Prob and Prob_ = log probability solving and not solving each item given quadratures (Q x N)
   arma::mat Prob = - X * (ipars(a_ind)).t();
@@ -29,9 +29,10 @@ void sonic::Estep(const arma::mat& y_u, const arma::mat& y_u_, const arma::mat& 
   }
 
   // ll
-  ll = arma::accu(rgl.col(0) % arma::trunc_log(pgul.col(0)));
-  for(arma::uword g = 1; g < G; ++g) {
-    ll += arma::accu(rgl.col(g) % arma::trunc_log(pgul.col(g)));
+  if(compute_ll) {
+    ll = arma::accu(rgl.col(0) % arma::trunc_log(pgul.col(0)));
+    for(arma::uword g = 1; g < G; ++g) {
+      ll += arma::accu(rgl.col(g) % arma::trunc_log(pgul.col(g)));
+    }
   }
 }
-
