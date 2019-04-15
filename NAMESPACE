@@ -1,5 +1,62 @@
 useDynLib(sonic, .registration = TRUE)
-exportPattern("^[[:alpha:]]+")
-importFrom("Rcpp", "evalCpp")
-importFrom("stats", "aggregate", "qnorm", "var")
 
+import("stats")
+importFrom("Rcpp", "evalCpp")
+
+export("fastRM", "fast2PL", "fast3PL", "fast3PLu", "fast4PL",
+  "estfun.rm", "estfun.twopl", "estfun.threepl", "estfun.threeplu", "estfun.fourpl"
+)
+
+S3method("coef", "rm")
+S3method("logLik", "rm")
+S3method("nobs", "rm")
+S3method("print", "rm")
+S3method("print", "summary.rm")
+S3method("summary", "rm")
+S3method("vcov", "rm")
+S3method("weights", "rm")
+
+S3method("coef", "twopl")
+S3method("logLik", "twopl")
+S3method("nobs", "twopl")
+S3method("print", "twopl")
+S3method("print", "summary.twopl")
+S3method("summary", "twopl")
+S3method("vcov", "twopl")
+S3method("weights", "twopl")
+
+S3method("coef", "threepl")
+S3method("logLik", "threepl")
+S3method("nobs", "threepl")
+S3method("print", "threepl")
+S3method("print", "summary.threepl")
+S3method("summary", "threepl")
+S3method("vcov", "threepl")
+S3method("weights", "threepl")
+
+S3method("coef", "threeplu")
+S3method("logLik", "threeplu")
+S3method("nobs", "threeplu")
+S3method("print", "threeplu")
+S3method("print", "summary.threeplu")
+S3method("summary", "threeplu")
+S3method("vcov", "threeplu")
+S3method("weights", "threeplu")
+
+S3method("coef", "fourpl")
+S3method("logLik", "fourpl")
+S3method("nobs", "fourpl")
+S3method("print", "fourpl")
+S3method("print", "summary.fourpl")
+S3method("summary", "fourpl")
+S3method("vcov", "fourpl")
+S3method("weights", "fourpl")
+
+### conditional registration of strucchange methods
+if(getRversion() >= "3.6.0") {
+  S3method(sandwich::estfun, "rm")
+  S3method(sandwich::estfun, "twopl")
+  S3method(sandwich::estfun, "threepl")
+  S3method(sandwich::estfun, "threeplu")
+  S3method(sandwich::estfun, "fourpl")
+}

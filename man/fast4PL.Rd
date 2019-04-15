@@ -1,25 +1,25 @@
-\name{fast2PL}
-\alias{fast2PL}
+\name{fast4PL}
+\alias{fast4PL}
 
-\alias{coef.twopl}
-\alias{logLik.twopl}
-\alias{nobs.twopl}
-\alias{print.twopl}
-\alias{print.summary.twopl}
-\alias{summary.twopl}
-\alias{vcov.twopl}
-\alias{weights.twopl}
-\alias{confint.twopl}
-\alias{estfun.twopl}
+\alias{coef.fourpl}
+\alias{logLik.fourpl}
+\alias{nobs.fourpl}
+\alias{print.fourpl}
+\alias{print.summary.fourpl}
+\alias{summary.fourpl}
+\alias{vcov.fourpl}
+\alias{weights.fourpl}
+\alias{confint.fourpl}
+\alias{estfun.fourpl}
 
-\title{Fit a Single or Multiple Group 2PL}
+\title{Fit a Single or Multiple Group 4PL}
 
 \description{
   FIXME
 }
 
 \usage{
-fast2PL(y, weights = NULL, impact = NULL, start = NULL,
+fast4PL(y, weights = NULL, impact = NULL, start = NULL,
   control = list(optimizer = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"),
     accelerator = c("none", "Ramsay", "SQUAREM", "Zhou"), maxit = 500L, reltol = 1e-4, Q = 61L,
     global = FALSE, criterion = c("ll", "l2", "l2_itemwise")),
@@ -57,7 +57,7 @@ fast2PL(y, weights = NULL, impact = NULL, start = NULL,
 }
 
 \value{
-  \code{fast2PL} returns an S3 object of class \code{"twopl"},  i.e., a list of
+  \code{fast4PL} returns an S3 object of class \code{"fourpl"},  i.e., a list of
     the following components:
   \item{ipars}{estimated item parameters in slope/intercept parametrization,}
   \item{mu}{(estimated) mean(s) of the normal distribution(s) for the person

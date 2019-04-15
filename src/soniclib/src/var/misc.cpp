@@ -1,5 +1,6 @@
 #include "var.hpp"
 
+// invert hessian
 arma::mat sonic::solve(const arma::mat& H)
 {
   arma::mat H_ = - H;
@@ -29,4 +30,30 @@ arma::mat sonic::solve(const arma::mat& H)
   }
 
   return(H_);
+}
+
+
+
+// logit vectorwise
+arma::vec sonic::logit(arma::vec x)
+{
+  return(arma::trunc_log(x / (1 - x)));
+}
+
+// logit
+double sonic::logit_(double x)
+{
+  return(std::log(x / (1 - x)));
+}
+
+// antilogit vectorwise
+arma::vec sonic::antilogit(arma::vec x)
+{
+  return(1 / (1 + arma::trunc_exp(- x)));
+}
+
+// antilogit
+double sonic::antilogit_(double x)
+{
+  return(1 / (1 + std::exp(- x)));
 }

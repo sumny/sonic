@@ -1,5 +1,5 @@
 ### fitting function
-fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
+fastRM <- function(y, weights = NULL, impact = NULL, start = NULL,
   control = list(optimizer = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"),
     accelerator = c("none", "Ramsay", "SQUAREM", "Zhou"), maxit = 500L, reltol = 1e-4, Q = 61L,
     global = FALSE, criterion = c("ll", "l2", "l2_itemwise")),
@@ -35,35 +35,35 @@ fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
 
   ### FIXME: start as vector
   start <- if(is.null(start)) {
-    as <- rep(0.851, N)
     ds <- qnorm(colMeans(y)) * 1.95
-    tsuf <- rowSums(y * matrix(as, M, N, byrow = TRUE))
+    tsuf <- rowSums(y)
     xs <- aggregate(tsuf ~ impact, FUN = mean)$tsuf
     vs <- aggregate(tsuf ~ impact, FUN = var)$tsuf
     xs <- xs - xs[1]
     vs <- vs / vs[1]
-    list(c(as, ds), xs, vs)
+    list(ds, xs, vs)
   } else {
     start
   }
 
-  fit <- fit(y, M, N, weights, impact, start, "2PL", control, algo_settings)
+  fit <- fit(y, M, N, weights, impact, start, "RM", control, algo_settings)
   if(!fit$converged) warning("EM algorithm did not converge.")
   fit$y <- y
   fit$weights <- weights
   fit$impact <- impact
   fit$call <- cl
-  class(fit) <- "twopl"
+  class(fit) <- "rm"
 
   return(fit)
 }
 
 ### methods
-coef.twopl <- function(object, ...)
+coef.rm <- function(object, ...)
 {
   pars <- as.vector(object$ipars)
-  N <- length(pars) / 2L
-  names(pars) <- c(paste0("a_", 1L:N), paste0("d_", 1L:N))
+  N <- length(pars)
+  pars <- c(pars, object$sg[1L])
+  names(pars) <- c(paste0("d_", 1L:N), paste0("sg_", levels(object$impact)[1L]))
   G <- dim(object$mu)[1L]
   if(G > 1L) {
     gpars <- c(object$mu[-1L], object$sg[-1L])
@@ -74,33 +74,33 @@ coef.twopl <- function(object, ...)
   return(pars)
 }
 
-vcov.twopl <- function(object, ...)
+vcov.rm <- function(object, ...)
 {
-  sc <- estfun.twopl(object, weights = sqrt(weights(object)))
+  sc <- estfun.rm(object, weights = sqrt(weights(object)))
   vc <- chol2inv(chol(crossprod(sc)))
   rownames(vc) <- colnames(vc) <- names(coef(object))
 
   return(vc)
 }
 
-logLik.twopl <- function(object, ...)
+logLik.rm <- function(object, ...)
 {
   return(structure(object$ll, df = length(coef(object)), class = "logLik"))
 }
 
-weights.twopl <- function(object, ...)
+weights.rm <- function(object, ...)
 {
   return(object$weights)
 }
 
-print.twopl <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
+print.rm <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
-  cat("2PL model parameters:\n")
+  cat("RM model parameters:\n")
   print(coef(x), digits = digits)
   invisible(x)
 }
 
-summary.twopl <- function(object, vcov. = NULL, ...)
+summary.rm <- function(object, vcov. = NULL, ...)
 {
   cf <- coef(object)
   if(is.null(vcov.))
@@ -112,17 +112,17 @@ summary.twopl <- function(object, vcov. = NULL, ...)
   colnames(cf) <- c("Estimate", "Std. Error")
 
   object$coefficients <- cf
-  class(object) <- "summary.twopl"
+  class(object) <- "summary.rm"
 
   return(object)
 }
 
-print.summary.twopl <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
+print.summary.rm <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
   cat("\nCall:\n")
   cat(paste(deparse(x$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
 
-  cat("2PL model parameters and standard errors:\n")
+  cat("RM model parameters and standard errors:\n")
   print(x$coefficients, digits = digits)
 
   cat("\nLog-likelihood:", format(signif(x$ll, digits)),
@@ -135,13 +135,13 @@ print.summary.twopl <- function(x, digits = max(3L, getOption("digits") - 3L), .
   invisible(x)
 }
 
-nobs.twopl <- function (object, ...)
+nobs.rm <- function (object, ...)
 {
   return(dim(object$y)[1])
 }
 
 ### FIXME: push this in C++
-estfun.twopl <- function(x, weights = x$weights, ...)
+estfun.rm <- function(x, weights = x$weights, ...)
 {
   dat <- x$y
   impact <- x$impact
@@ -158,21 +158,19 @@ estfun.twopl <- function(x, weights = x$weights, ...)
   K <- 2L
   means <- x$mu
   vars <- x$sg ^ 2
-  aest <- coefs[1:N]
-  dest <- coefs[(N + 1):(2 * N)]
+  dest <- coefs[1:N]
   pX <- LX <- matrix(0, M, Q)
-  scores_a <- scores_d <- vector("list", G)
-  nest <- 2L * N
+  scores_d <- vector("list", G)
+  nest <- N
   scores <- matrix(0, M, nest)
   for(g in 1L:G) {
     px_tmp_ <- matrix(1, sum(impact == g), Q)
-    scores_a[[g]] <- scores_d[[g]] <- vector("list", N)
+    scores_d[[g]] <- vector("list", N)
     M_tmp <- sum(impact == g)
     for(j in 1L:N) {
       pat <- dat[impact == g, j] + 1
-      aest_tmp <- aest[j]
       dest_tmp <- dest[j]
-      exp_tmp <- exp(aest_tmp * X + dest_tmp)
+      exp_tmp <- exp(X + dest_tmp)
       px_tmp <- exp_tmp / (1 + exp_tmp)
       if(any(px_tmp == 1)) {
         px_tmp[px_tmp == 1] <- 1 - .Machine$double.neg.eps
@@ -189,9 +187,6 @@ estfun.twopl <- function(x, weights = x$weights, ...)
       px_tmp_ <- px_tmp_ * px_tmp_sel
       expone <- 1 + exp_tmp
       exponesq <- expone ^ 2
-      px_da_tmp <- (X * exp_tmp) / exponesq
-      px_da_tmp <- rbind(-px_da_tmp, px_da_tmp)
-      scores_a[[g]][[j]] <- px_da_tmp[pat, ] / px_tmp[pat, ]
       px_dd_tmp <- exp_tmp / exponesq
       px_dd_tmp <- rbind(-px_dd_tmp, px_dd_tmp)
       scores_d[[g]][[j]] <- px_dd_tmp[pat, ] / px_tmp[pat, ]
@@ -199,30 +194,30 @@ estfun.twopl <- function(x, weights = x$weights, ...)
     LX[impact == g, ] <- px_tmp_
     pX[impact == g, ] <- px_tmp_ * matrix(AX[, g], M_tmp, Q, TRUE)
     pX[impact == g, ] <- pX[impact == g, ] / rowSums(pX[impact == g, , drop = FALSE])
-    scores_a[[g]] <-
-    lapply(scores_a[[g]], function(sc_a) {
-      rowSums(sc_a * pX[impact == g, , drop = FALSE])
-    })
     scores_d[[g]] <-
     lapply(scores_d[[g]], function(sc_d) {
       rowSums(sc_d * pX[impact == g, , drop = FALSE])
     })
     text <- paste0("cbind(", paste0(
-      c(sapply(1L:N, function(j) {
-        gsub("item", j, "scores_a[[g]][[item]]")
-      }),
       sapply(1L:N, function(j) {
         gsub("item", j, "scores_d[[g]][[item]]")
-      })), collapse = ","), ")"
+      }), collapse = ","), ")"
     )
     scores[impact == g, ] <- eval(parse(text = text))
   }
-  if(G > 1L) {
-    PX <- numeric(M)
-    for(g in 2L:G) {
-      PX[impact == g] <- rowSums(LX[impact == g, ] * matrix(AX[, g], sum(impact == g), Q, TRUE))
-    }
-    for(g in 2L:G) {
+  PX <- numeric(M)
+  for(g in 1L:G) {
+    PX[impact == g] <- rowSums(LX[impact == g, ] * matrix(AX[, g], sum(impact == g), Q, TRUE))
+  }
+  for(g in 1L:G) {
+    if(g == 1) {
+      scores <- cbind(scores, matrix(0, M, 1L))
+      m <- means[g]
+      v <- vars[g]
+      scores[impact == g, dim(scores)[2L]] <- (- (1 / 2) * (PX[impact == g] ^ -1) *
+        colSums(matrix((v ^ -1) - ((X - m) ^ 2) * (v ^ -2), Q, sum(impact == g)) *
+          t(LX[impact == g, , drop = FALSE]) * matrix(AX[, g], Q, sum(impact == g))))
+    } else {
       scores <- cbind(scores, matrix(0, M, 2L))
       m <- means[g]
       v <- vars[g]

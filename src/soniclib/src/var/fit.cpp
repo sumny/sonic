@@ -16,7 +16,8 @@
 // FIXME check which par vectors are needed
 // FIXME infinite values in optimization
 // FIXME NA values
-// FIXME probs function in misc.cpp
+// FIXME probs functions in misc.cpp
+// FIXME always else if instead else
 RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmodel, SEXP Rcontrol, SEXP Ralgo_settings)
 {
   BEGIN_RCPP
@@ -67,7 +68,36 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   const arma::uvec n_vec = arma::linspace<arma::uvec>(0, N - 1, N);
   const arma::uvec z_ind = 2 * n_vec;
   const arma::uvec o_ind = z_ind + 1;
-  arma::uvec item_ind(2, arma::fill::none);
+  arma::uword npars;
+  arma::uvec a_ind(N, arma::fill::none);
+  arma::uvec d_ind(N, arma::fill::none);
+  arma::uvec g_ind(N, arma::fill::none);
+  arma::uvec u_ind(N, arma::fill::none);
+  if(model == 0) {
+    npars = 2;
+    a_ind = arma::linspace<arma::uvec>(0, N - 1, N);
+    d_ind = arma::linspace<arma::uvec>(N, (2 * N) - 1, N);
+  } else if(model == 1) {
+    npars = 1;
+    d_ind = arma::linspace<arma::uvec>(0, N - 1, N);
+  } else if(model == 2) {
+    npars = 3;
+    a_ind = arma::linspace<arma::uvec>(0, N - 1, N);
+    d_ind = arma::linspace<arma::uvec>(N, (2 * N) - 1, N);
+    g_ind = arma::linspace<arma::uvec>(2 * N, (3 * N) - 1, N);
+  } else if(model == 3) {
+    npars = 3;
+    a_ind = arma::linspace<arma::uvec>(0, N - 1, N);
+    d_ind = arma::linspace<arma::uvec>(N, (2 * N) - 1, N);
+    u_ind = arma::linspace<arma::uvec>(2 * N, (3 * N) - 1, N);
+  } else if(model == 4) {
+    npars = 4;
+    a_ind = arma::linspace<arma::uvec>(0, N - 1, N);
+    d_ind = arma::linspace<arma::uvec>(N, (2 * N) - 1, N);
+    g_ind = arma::linspace<arma::uvec>(2 * N, (3 * N) - 1, N);
+    u_ind = arma::linspace<arma::uvec>(3 * N, (4 * N) - 1, N);
+  }
+  arma::uvec item_ind(npars, arma::fill::none);
   arma::mat pul(Q, P, arma::fill::none);
   arma::mat pgul(P, G, arma::fill::none);
   arma::cube rj_g(Q, 2 * N, G, arma::fill::none);
@@ -76,9 +106,7 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   arma::uvec itemopt = arma::ones<arma::uvec>(N);
   arma::uword iter = 0;
   bool run = true;
-  const arma::uvec a_ind = arma::linspace<arma::uvec>(0, N - 1, N);
-  const arma::uvec d_ind = arma::linspace<arma::uvec>(N, 2 * N - 1, N);
-  Rcpp::LogicalVector convergence(maxit, false);
+  Rcpp::LogicalVector convergence(maxit + 1, false);
 
   // Mstep stuff
   sonic::Mstep_data_g opt_data_g;
@@ -87,12 +115,15 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   sonic::Mstep_data_i_wh opt_data_i_wh;
   if(global) {
     if(optimizer == 0) {
+      opt_data_g_wh.model = model;
       opt_data_g_wh.G = G;
       opt_data_g_wh.ll = 0;
       opt_data_g_wh.n_vec = n_vec;
       opt_data_g_wh.a_ind = a_ind;
       opt_data_g_wh.d_ind = d_ind;
-      opt_data_g_wh.gr_out = arma::zeros<arma::vec>(2 * N);
+      opt_data_g_wh.g_ind = g_ind;
+      opt_data_g_wh.u_ind = u_ind;
+      opt_data_g_wh.gr_out = arma::zeros<arma::vec>(npars * N);
       opt_data_g_wh.X = X;
       opt_data_g_wh.gr_tmp = arma::mat(Q, N, arma::fill::none);
       opt_data_g_wh.W_tmp = arma::mat(Q, N, arma::fill::none);
@@ -100,13 +131,16 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
       opt_data_g_wh.Probs = arma::mat(Q, 2 * N, arma::fill::none);
       opt_data_g_wh.z_ind = z_ind;
       opt_data_g_wh.o_ind = o_ind;
-      opt_data_g_wh.hess_out = arma::zeros<arma::mat>(2 * N, 2 * N);
+      opt_data_g_wh.hess_out = arma::zeros<arma::mat>(npars * N, npars * N);
     } else {
+      opt_data_g.model = model;
       opt_data_g.G = G;
       opt_data_g.ll = 0;
       opt_data_g.a_ind = a_ind;
       opt_data_g.d_ind = d_ind;
-      opt_data_g.gr_out = arma::zeros<arma::vec>(2 * N);
+      opt_data_g.g_ind = g_ind;
+      opt_data_g.u_ind = u_ind;
+      opt_data_g.gr_out = arma::zeros<arma::vec>(npars * N);
       opt_data_g.X = X;
       opt_data_g.gr_tmp = arma::mat(Q, N, arma::fill::none);
       opt_data_g.Prob = arma::mat(Q, N, arma::fill::none);
@@ -116,18 +150,20 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
     }
   } else {
     if(optimizer == 0) {
+      opt_data_i_wh.model = model;
       opt_data_i_wh.G = G;
       opt_data_i_wh.ll = 0;
-      opt_data_i_wh.gr_out = arma::zeros<arma::vec>(2);
+      opt_data_i_wh.gr_out = arma::zeros<arma::vec>(npars);
       opt_data_i_wh.gr_tmp = arma::vec(Q, arma::fill::none);
       opt_data_i_wh.X = X;
       opt_data_i_wh.probs = arma::mat(Q, 2, arma::fill::none);
       opt_data_i_wh.W_tmp = arma::vec(Q, arma::fill::none);
-      opt_data_i_wh.hess_out = arma::zeros<arma::mat>(2, 2);
+      opt_data_i_wh.hess_out = arma::zeros<arma::mat>(npars, npars);
     } else {
+      opt_data_i.model = model;
       opt_data_i.G = G;
       opt_data_i.ll = 0;
-      opt_data_i.gr_out = arma::vec(2, arma::fill::none);
+      opt_data_i.gr_out = arma::vec(npars, arma::fill::none);
       opt_data_i.gr_tmp = arma::vec(Q, arma::fill::none);
       opt_data_i.X = X;
       opt_data_i.probs = arma::mat(Q, 2, arma::fill::none);
@@ -178,25 +214,17 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   // accelerator stuff
   arma::vec preM2 = ipars;
   arma::vec preM1 = preM2;
-  arma::mat U(2 * N, 3, arma::fill::zeros);
-  arma::mat V(2 * N, 3, arma::fill::zeros);
-  arma::uword mk = 1;
-  arma::uword Mk = 10;
-  arma::vec fold = ipars;
-  arma::vec fnew = fold;
-  arma::vec xold = ipars;
-  arma::vec xnew = xold;
-  arma::mat Fdiff = arma::zeros<arma::mat>(2 * N, Mk);
-  arma::mat Xdiff = Fdiff;
+  arma::mat U(npars * N, 3, arma::fill::zeros);
+  arma::mat V(npars * N, 3, arma::fill::zeros);
 
   // debug stuff
   //opt_data_g.rj_g = rj_g;
-  //arma::vec gradient_g = arma::vec(2 * N);
+  //arma::vec gradient_g = arma::vec(npars * N);
   //double ll = sonic::llfun_g(ipars, &gradient_g, &opt_data_g);
   //run = false;
 
   timer.step("preE1");
-  sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, true);
+  sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, g_ind, u_ind, true, model);
   timer.step("postE1");
 
   // run simulations only 60 seconds CPU time (see bottom of the loop)
@@ -209,21 +237,21 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
       Rcpp::checkUserInterrupt();
       iter += 1;
       ll_old = ll;
-      convergence[iter - 1] = sonic::Mstep_items(ipars, global, optimizer, N, rj_g, itemopt, &opt_data_g, &opt_data_g_wh, &opt_data_i, &opt_data_i_wh, settings);
+      convergence[iter - 1] = sonic::Mstep_items(model, npars, ipars, global, optimizer, N, rj_g, itemopt, &opt_data_g, &opt_data_g_wh, &opt_data_i, &opt_data_i_wh, settings);
 
       // group parameters
-      if(G > 1) {
-        sonic::Mstep_groups(G, P, Q, mu, sg, AX, X, pul, rgl);
+      if((model == 1) || (G > 1)) {
+        sonic::Mstep_groups(model, G, P, Q, mu, sg, AX, X, pul, rgl);
       }
       timer.step("postM");
 
       // EM acceleration, 0 == "none", 1 == "Ramsay", 2 == "SQUAREM", 3 == "Zhou"
       timer.step("preA");
-      sonic::accelerate(y_u, y_u_, rgl, N, G, P, Q, ipars, X, AX, p_vec, n_vec, a_ind, d_ind, preM1, preM2, accelerator, ll, U, V, iter);
+      sonic::accelerate(y_u, y_u_, rgl, N, G, P, Q, ipars, X, AX, p_vec, n_vec, a_ind, d_ind, g_ind, u_ind, preM1, preM2, accelerator, ll, U, V, iter, model);
       timer.step("postA");
 
       timer.step("preE");
-      sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, compute_ll);
+      sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, g_ind, u_ind, compute_ll, model);
       ll_new = ll;
       timer.step("postE");
 
@@ -235,9 +263,15 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
         critval = arma::norm(ipars - preM1, 2);
       } else if(criterion == 2) {
         // FIXME check this
-        n_vec.for_each( [&itemnrm, &ipars, &preM1, &item_ind, &itemopt, &reltol, &N](const arma::uword &j) {
+        n_vec.for_each( [&itemnrm, &ipars, &preM1, &item_ind, &itemopt, &reltol, &N, &model](const arma::uword &j) {
           item_ind(0) = j;
-          item_ind(1) = j + 1;
+          if(model != 1) {
+            item_ind(1) = j + 1;
+          } else if((model == 2) || (model == 3) || (model == 4)) {
+            item_ind(2) = j + 2;
+          } else if(model == 4) {
+            item_ind(3) = j + 3;
+          }
           itemnrm(j) = arma::norm(ipars.elem(item_ind) - preM1.elem(item_ind), 2);
           if(itemnrm(j) <= (reltol / N)) {
             itemopt(j) = 0;
@@ -254,8 +288,9 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
       //if((std::abs(critval) <= reltol) || (iter == maxit) || (((std::clock() - extra_time) / (double) CLOCKS_PER_SEC) >= 60)) {
       if((std::abs(critval) <= reltol) || (iter == maxit)) {
         run = false;
+        convergence = convergence[Rcpp::Range(0, iter - 1)];
         if(criterion != 0) {
-          sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, true);
+          sonic::Estep(y_u, y_u_, rgl, G, ipars, X, AX, ll, pul, pgul, rj_g, p_vec, n_vec, a_ind, d_ind, g_ind, u_ind, true, model);
           ll_new = ll;
         }
       } else {
@@ -277,21 +312,19 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   ret["ipars"] = Rcpp::wrap(ipars);
   ret["mu"] = Rcpp::wrap(mu);
   ret["sg"] = Rcpp::wrap(sg);
-  ret["iter"] = Rcpp::wrap(iter);
   ret["ll"] = Rcpp::wrap(ll_new);
-  ret["convergence"] = Rcpp::wrap(convergence[Rcpp::Range(0, iter - 1)]);
+  ret["iter"] = Rcpp::wrap(iter);
   ret["converged"] = Rcpp::wrap(converged);
+  ret["convergence"] = Rcpp::wrap(convergence);
   ret["critval"] = Rcpp::wrap(critval);
   ret["y_u"] = Rcpp::wrap(y_u);
   ret["rgl"] = Rcpp::wrap(rgl);
+  ret["X"] = Rcpp::wrap(X);
+  ret["AX"] = Rcpp::wrap(AX);
   ret["time"] = Rcpp::wrap(time);
-  ret["test1"] = Rcpp::wrap(std::sqrt(arma::accu(arma::square(ipars))));
-  ret["test2"] = Rcpp::wrap(arma::norm(ipars, 2));
   // debug stuff
   //ret["debug_ll"] = Rcpp::wrap(ll);
   //ret["debug_gr"] = Rcpp::wrap(gradient_g);
-  //ret["debug_gr_a"] = Rcpp::wrap(opt_data_g.gr_a);
-  //ret["debug_gr_d"] = Rcpp::wrap(opt_data_g.gr_d);
   //ret["debug_gr_tmp"] = Rcpp::wrap(opt_data_g.gr_tmp);
 
   return(ret);

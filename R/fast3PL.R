@@ -1,5 +1,5 @@
 ### fitting function
-fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
+fast3PL <- function(y, weights = NULL, impact = NULL, start = NULL,
   control = list(optimizer = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"),
     accelerator = c("none", "Ramsay", "SQUAREM", "Zhou"), maxit = 500L, reltol = 1e-4, Q = 61L,
     global = FALSE, criterion = c("ll", "l2", "l2_itemwise")),
@@ -37,33 +37,35 @@ fast2PL <- function(y, weights = NULL, impact = NULL, start = NULL,
   start <- if(is.null(start)) {
     as <- rep(0.851, N)
     ds <- qnorm(colMeans(y)) * 1.95
+    gs <- rep(0.15, N)
+    gs <- log(gs / (1 - gs))
     tsuf <- rowSums(y * matrix(as, M, N, byrow = TRUE))
     xs <- aggregate(tsuf ~ impact, FUN = mean)$tsuf
     vs <- aggregate(tsuf ~ impact, FUN = var)$tsuf
     xs <- xs - xs[1]
     vs <- vs / vs[1]
-    list(c(as, ds), xs, vs)
+    list(c(as, ds, gs), xs, vs)
   } else {
     start
   }
 
-  fit <- fit(y, M, N, weights, impact, start, "2PL", control, algo_settings)
+  fit <- fit(y, M, N, weights, impact, start, "3PL", control, algo_settings)
   if(!fit$converged) warning("EM algorithm did not converge.")
   fit$y <- y
   fit$weights <- weights
   fit$impact <- impact
   fit$call <- cl
-  class(fit) <- "twopl"
+  class(fit) <- "threepl"
 
   return(fit)
 }
 
 ### methods
-coef.twopl <- function(object, ...)
+coef.threepl <- function(object, ...)
 {
   pars <- as.vector(object$ipars)
-  N <- length(pars) / 2L
-  names(pars) <- c(paste0("a_", 1L:N), paste0("d_", 1L:N))
+  N <- length(pars) / 3L
+  names(pars) <- c(paste0("a_", 1L:N), paste0("d_", 1L:N), paste0("g_", 1L:N))
   G <- dim(object$mu)[1L]
   if(G > 1L) {
     gpars <- c(object$mu[-1L], object$sg[-1L])
@@ -74,33 +76,33 @@ coef.twopl <- function(object, ...)
   return(pars)
 }
 
-vcov.twopl <- function(object, ...)
+vcov.threepl <- function(object, ...)
 {
-  sc <- estfun.twopl(object, weights = sqrt(weights(object)))
+  sc <- estfun.threepl(object, weights = sqrt(weights(object)))
   vc <- chol2inv(chol(crossprod(sc)))
   rownames(vc) <- colnames(vc) <- names(coef(object))
 
   return(vc)
 }
 
-logLik.twopl <- function(object, ...)
+logLik.threepl <- function(object, ...)
 {
   return(structure(object$ll, df = length(coef(object)), class = "logLik"))
 }
 
-weights.twopl <- function(object, ...)
+weights.threepl <- function(object, ...)
 {
   return(object$weights)
 }
 
-print.twopl <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
+print.threepl <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
-  cat("2PL model parameters:\n")
+  cat("3PL model parameters:\n")
   print(coef(x), digits = digits)
   invisible(x)
 }
 
-summary.twopl <- function(object, vcov. = NULL, ...)
+summary.threepl <- function(object, vcov. = NULL, ...)
 {
   cf <- coef(object)
   if(is.null(vcov.))
@@ -112,17 +114,17 @@ summary.twopl <- function(object, vcov. = NULL, ...)
   colnames(cf) <- c("Estimate", "Std. Error")
 
   object$coefficients <- cf
-  class(object) <- "summary.twopl"
+  class(object) <- "summary.threepl"
 
   return(object)
 }
 
-print.summary.twopl <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
+print.summary.threepl <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
   cat("\nCall:\n")
   cat(paste(deparse(x$call), sep = "\n", collapse = "\n"), "\n\n", sep = "")
 
-  cat("2PL model parameters and standard errors:\n")
+  cat("3PL model parameters and standard errors:\n")
   print(x$coefficients, digits = digits)
 
   cat("\nLog-likelihood:", format(signif(x$ll, digits)),
@@ -135,13 +137,13 @@ print.summary.twopl <- function(x, digits = max(3L, getOption("digits") - 3L), .
   invisible(x)
 }
 
-nobs.twopl <- function (object, ...)
+nobs.threepl <- function (object, ...)
 {
   return(dim(object$y)[1])
 }
 
 ### FIXME: push this in C++
-estfun.twopl <- function(x, weights = x$weights, ...)
+estfun.threepl <- function(x, weights = x$weights, ...)
 {
   dat <- x$y
   impact <- x$impact
@@ -160,20 +162,22 @@ estfun.twopl <- function(x, weights = x$weights, ...)
   vars <- x$sg ^ 2
   aest <- coefs[1:N]
   dest <- coefs[(N + 1):(2 * N)]
+  gest <- plogis(coefs[((2 * N) + 1):(3 * N)])
   pX <- LX <- matrix(0, M, Q)
-  scores_a <- scores_d <- vector("list", G)
-  nest <- 2L * N
+  scores_a <- scores_d <- scores_g <- vector("list", G)
+  nest <- 3L * N
   scores <- matrix(0, M, nest)
   for(g in 1L:G) {
     px_tmp_ <- matrix(1, sum(impact == g), Q)
-    scores_a[[g]] <- scores_d[[g]] <- vector("list", N)
+    scores_a[[g]] <- scores_d[[g]] <- scores_g[[g]] <- vector("list", N)
     M_tmp <- sum(impact == g)
     for(j in 1L:N) {
       pat <- dat[impact == g, j] + 1
       aest_tmp <- aest[j]
       dest_tmp <- dest[j]
+      gest_tmp <- gest[j]
       exp_tmp <- exp(aest_tmp * X + dest_tmp)
-      px_tmp <- exp_tmp / (1 + exp_tmp)
+      px_tmp <- gest_tmp + (1 - gest_tmp) * (exp_tmp / (1 + exp_tmp))
       if(any(px_tmp == 1)) {
         px_tmp[px_tmp == 1] <- 1 - .Machine$double.neg.eps
       }
@@ -187,14 +191,19 @@ estfun.twopl <- function(x, weights = x$weights, ...)
         px_tmp_sel[which(ex, arr.ind = TRUE)] <- 1
       }
       px_tmp_ <- px_tmp_ * px_tmp_sel
+      gdiffu <- gest_tmp - 1
       expone <- 1 + exp_tmp
       exponesq <- expone ^ 2
-      px_da_tmp <- (X * exp_tmp) / exponesq
+      px_da_tmp <- -(gdiffu * X * exp_tmp) / exponesq
       px_da_tmp <- rbind(-px_da_tmp, px_da_tmp)
       scores_a[[g]][[j]] <- px_da_tmp[pat, ] / px_tmp[pat, ]
-      px_dd_tmp <- exp_tmp / exponesq
+      px_dd_tmp <- -(gdiffu * exp_tmp) / exponesq
       px_dd_tmp <- rbind(-px_dd_tmp, px_dd_tmp)
       scores_d[[g]][[j]] <- px_dd_tmp[pat, ] / px_tmp[pat, ]
+      gest_tmp_logit <- qlogis(gest_tmp)
+      px_dg_tmp <- exp(gest_tmp_logit) / (((1 + exp(gest_tmp_logit)) ^ 2) * expone)
+      px_dg_tmp <- rbind(-px_dg_tmp, px_dg_tmp)
+      scores_g[[g]][[j]] <- px_dg_tmp[pat, ] / px_tmp[pat, ]
     }
     LX[impact == g, ] <- px_tmp_
     pX[impact == g, ] <- px_tmp_ * matrix(AX[, g], M_tmp, Q, TRUE)
@@ -207,12 +216,19 @@ estfun.twopl <- function(x, weights = x$weights, ...)
     lapply(scores_d[[g]], function(sc_d) {
       rowSums(sc_d * pX[impact == g, , drop = FALSE])
     })
+    scores_g[[g]] <-
+     lapply(scores_g[[g]], function(sc_g) {
+       rowSums(sc_g * pX[impact == g, , drop = FALSE])
+    })
     text <- paste0("cbind(", paste0(
       c(sapply(1L:N, function(j) {
         gsub("item", j, "scores_a[[g]][[item]]")
       }),
       sapply(1L:N, function(j) {
         gsub("item", j, "scores_d[[g]][[item]]")
+      }),
+      sapply(1L:N, function(j) {
+        gsub("item", j, "scores_g[[g]][[item]]")
       })), collapse = ","), ")"
     )
     scores[impact == g, ] <- eval(parse(text = text))

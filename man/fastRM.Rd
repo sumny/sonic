@@ -1,25 +1,25 @@
-\name{fast2PL}
-\alias{fast2PL}
+\name{fastRM}
+\alias{fastRM}
 
-\alias{coef.twopl}
-\alias{logLik.twopl}
-\alias{nobs.twopl}
-\alias{print.twopl}
-\alias{print.summary.twopl}
-\alias{summary.twopl}
-\alias{vcov.twopl}
-\alias{weights.twopl}
-\alias{confint.twopl}
-\alias{estfun.twopl}
+\alias{coef.rm}
+\alias{logLik.rm}
+\alias{nobs.rm}
+\alias{print.rm}
+\alias{print.summary.rm}
+\alias{summary.rm}
+\alias{vcov.rm}
+\alias{weights.rm}
+\alias{confint.rm}
+\alias{estfun.rm}
 
-\title{Fit a Single or Multiple Group 2PL}
+\title{Fit a Single or Multiple Group Rasch Model}
 
 \description{
   FIXME
 }
 
 \usage{
-fast2PL(y, weights = NULL, impact = NULL, start = NULL,
+fastRM(y, weights = NULL, impact = NULL, start = NULL,
   control = list(optimizer = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"),
     accelerator = c("none", "Ramsay", "SQUAREM", "Zhou"), maxit = 500L, reltol = 1e-4, Q = 61L,
     global = FALSE, criterion = c("ll", "l2", "l2_itemwise")),
@@ -57,7 +57,7 @@ fast2PL(y, weights = NULL, impact = NULL, start = NULL,
 }
 
 \value{
-  \code{fast2PL} returns an S3 object of class \code{"twopl"},  i.e., a list of
+  \code{fastRM} returns an S3 object of class \code{"rm"},  i.e., a list of
     the following components:
   \item{ipars}{estimated item parameters in slope/intercept parametrization,}
   \item{mu}{(estimated) mean(s) of the normal distribution(s) for the person
