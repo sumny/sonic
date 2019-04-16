@@ -20,21 +20,7 @@
 
 \usage{
 fastRM(y, weights = NULL, impact = NULL, start = NULL,
-  control = list(optimizer = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"),
-    accelerator = c("none", "Ramsay", "SQUAREM", "Zhou"), maxit = 500L, reltol = 1e-4, Q = 61L,
-    global = FALSE, criterion = c("ll", "l2", "l2_itemwise")),
-  algo_settings = list(err_tol = 1e-8, iter_max = 2000L, lbfgs_par_M = 10L,
-    cg_method = c("FR", "PR", "FR-PR", "HS", "DY", "HZ"), cg_restart_threshold = 0.1,
-    gd_method = c("Basic", "Momentum", "NAG", "AdaGrad", "RMSprop", "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax"),
-    nm_par_alpha = 1.0, nm_par_beta = 0.5, nm_par_gamma = 2.0, nm_par_delta = 0.5,
-    gd_step_size = 0.1, gd_momentum_par = 0.9, gd_norm_term = 10e-08, gd_ada_rho = 0.9,
-    gd_adam_beta_1 = 0.9, gd_adam_beta_2 = 0.999, gd_ada_max = FALSE, de_n_pop = 200L,
-    de_n_gen = 1000L, de_check_freq = -1L, de_mutation_method = c("rand", "best"), de_par_F = 0.8,
-    de_par_CR = 0.9, pso_n_pop = 100L, pso_n_gen = 1000L, pso_check_freq = -1L,
-    pso_inertia_method = c("ld", "dampening"), pso_par_w_min = 0.1, pso_par_w_max = 0.99,
-    pso_par_w_damp = 0.99, pso_velocity_method = c("fw", "ld"), pso_par_c_cog = 2.0,
-    pso_par_c_soc = 2.0, pso_par_initial_c_cog = 2.5, pso_par_final_c_cog = 0.5,
-    pso_par_initial_c_soc = 0.5, pso_par_final_c_soc = 2.5))
+  control = NULL, algo_settings = NULL)
 }
 
 \arguments{
@@ -53,7 +39,57 @@ fastRM(y, weights = NULL, impact = NULL, start = NULL,
 }
 
 \details{
-  FIXME
+  \code{control} allows for the following settings (their defaults being shown
+    in the first place):
+  \itemize{
+  \item{optimizer = "BFGS", "Newton", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"}
+  \item{accelerator = "Zhou", "none", "Ramsay", "SQUAREM"}
+  \item{maxit = 500}
+  \item{reltol = 1e-4}
+  \item{Q = 61}
+  }
+  \code{algo_settings} allows for the following settings (their defaults being
+    shown in the first place):
+  \itemize{
+  \item{err_tol = 1e-8}
+  \item{iter_max = 25}
+  \item{lbfgs_par_M = 10}
+  \item{cg_method = "FR", "PR", "FR-PR", "HS", "DY", "HZ"}
+  \item{cg_restart_threshold = 0.1}
+  \item{gd_method = "Basic", "Momentum", "NAG", "AdaGrad", "RMSprop",
+    "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax"}
+  \item{nm_par_alpha = 1.0}
+  \item{nm_par_beta = 0.5}
+  \item{nm_par_gamma = 2.0}
+  \item{nm_par_delta = 0.5}
+  \item{gd_step_size = 0.1}
+  \item{gd_momentum_par = 0.9}
+  \item{gd_norm_term = 10e-08}
+  \item{gd_ada_rho = 0.9}
+  \item{gd_adam_beta_1 = 0.9}
+  \item{gd_adam_beta_2 = 0.999}
+  \item{gd_ada_max = FALSE}
+  \item{de_n_pop = 200}
+  \item{de_n_gen = 1000}
+  \item{de_check_freq = -1}
+  \item{de_mutation_method = "rand", "best"}
+  \item{de_par_F = 0.8}
+  \item{de_par_CR = 0.9}
+  \item{pso_n_pop = 100}
+  \item{pso_n_gen = 1000}
+  \item{pso_check_freq = -1}
+  \item{pso_inertia_method = "ld", "dampening"}
+  \item{pso_par_w_min = 0.1}
+  \item{pso_par_w_max = 0.99}
+  \item{pso_par_w_damp = 0.99}
+  \item{pso_velocity_method = "fw", "ld"}
+  \item{pso_par_c_cog = 2.0}
+  \item{pso_par_c_soc = 2.0}
+  \item{pso_par_initial_c_cog = 2.5}
+  \item{pso_par_final_c_cog = 0.5}
+  \item{pso_par_initial_c_soc = 0.5}
+  \item{pso_par_final_c_soc = 2.5}
+  }
 }
 
 \value{
@@ -65,7 +101,7 @@ fastRM(y, weights = NULL, impact = NULL, start = NULL,
   \item{sg}{(estimated) standard deviation(s) of the normal distribution(s) for
     the person parameters (for each level of \code{impact}),}
   \item{ll}{marginal log-likelihood of the fitted model,}
-  \item{iter}{number of iterations until the EM algorithm converged,}
+  \item{iter}{number of EM cycles,}
   \item{converged}{convergence code (0 or 1),}
   \item{convergence}{logical vector indicating convergence in each M-step,}
   \item{critval}{critical value indicating termination of the EM,}

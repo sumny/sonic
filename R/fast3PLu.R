@@ -1,20 +1,6 @@
 ### fitting function
 fast3PLu <- function(y, weights = NULL, impact = NULL, start = NULL,
-  control = list(optimizer = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"),
-    accelerator = c("none", "Ramsay", "SQUAREM", "Zhou"), maxit = 500L, reltol = 1e-4, Q = 61L,
-    global = FALSE, criterion = c("ll", "l2", "l2_itemwise")),
-  algo_settings = list(err_tol = 1e-8, iter_max = 2000L, lbfgs_par_M = 10L,
-    cg_method = c("FR", "PR", "FR-PR", "HS", "DY", "HZ"), cg_restart_threshold = 0.1,
-    gd_method = c("Basic", "Momentum", "NAG", "AdaGrad", "RMSprop", "AdaDelta", "Adam/AdaMax", "Nadam/NadaMax"),
-    nm_par_alpha = 1.0, nm_par_beta = 0.5, nm_par_gamma = 2.0, nm_par_delta = 0.5,
-    gd_step_size = 0.1, gd_momentum_par = 0.9, gd_norm_term = 10e-08, gd_ada_rho = 0.9,
-    gd_adam_beta_1 = 0.9, gd_adam_beta_2 = 0.999, gd_ada_max = FALSE, de_n_pop = 200L,
-    de_n_gen = 1000L, de_check_freq = -1L, de_mutation_method = c("rand", "best"), de_par_F = 0.8,
-    de_par_CR = 0.9, pso_n_pop = 100L, pso_n_gen = 1000L, pso_check_freq = -1L,
-    pso_inertia_method = c("ld", "dampening"), pso_par_w_min = 0.1, pso_par_w_max = 0.99,
-    pso_par_w_damp = 0.99, pso_velocity_method = c("fw", "ld"), pso_par_c_cog = 2.0,
-    pso_par_c_soc = 2.0, pso_par_initial_c_cog = 2.5, pso_par_final_c_cog = 0.5,
-    pso_par_initial_c_soc = 0.5, pso_par_final_c_soc = 2.5))
+  control = NULL, algo_settings = NULL)
 {
   cl <- match.call()
   y <- as.matrix(y)

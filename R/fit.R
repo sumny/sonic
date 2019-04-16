@@ -12,12 +12,12 @@ fit <- function(y, M, N, weights, impact, start, model, control, algo_settings)
 
   ### optimizer (starting from 0)
   control$optimizer <- as.integer(factor(match.arg(control$optimizer,
-    c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO")),
+    c("BFGS", "Newton", "L-BFGS", "CG", "GD", "NM", "DE", "PSO")),
     levels = c("Newton", "BFGS", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"))) - 1L
 
   ### accelerator (starting from 0)
   control$accelerator <- as.integer(factor(match.arg(control$accelerator,
-    c("none", "Ramsay", "SQUAREM", "Zhou")),
+    c("Zhou", "none", "Ramsay", "SQUAREM")),
     levels = c("none", "Ramsay", "SQUAREM", "Zhou"))) - 1L
 
   ### maxit, reltol, Q, global
