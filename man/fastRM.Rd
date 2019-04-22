@@ -2,20 +2,23 @@
 \alias{fastRM}
 
 \alias{coef.rm}
+\alias{confint.rm}
+\alias{estfun.rm}
 \alias{logLik.rm}
 \alias{nobs.rm}
-\alias{print.rm}
 \alias{print.summary.rm}
+\alias{print.rm}
 \alias{summary.rm}
 \alias{vcov.rm}
 \alias{weights.rm}
-\alias{confint.rm}
-\alias{estfun.rm}
 
-\title{Fit a Single or Multiple Group Rasch Model}
+\title{Single or Multiple Group RM Fitting Function}
 
 \description{
-  FIXME
+  \code{fastRM} is a basic fitting function for single and multiple group RM
+  (in slope/intercept parametrization) under the MML framework relying on the
+  application of an EM algorithm. Slopes are fixed at one, but the latent
+  variance is freely estimated.
 }
 
 \usage{
@@ -25,28 +28,34 @@ fastRM(y, weights = NULL, impact = NULL, start = NULL,
 
 \arguments{
   \item{y}{item response object that can be coerced (via
-    \code{\link[base]{as.matrix}}) to a numeric matrix with scores 0, 1.
+    \code{\link[base]{as.matrix}}) to a numeric matrix with scores 0, or 1.
     Typically, either already a matrix or a data frame.}
   \item{weights}{an optional vector of weights (interpreted as case weights).}
   \item{impact}{an optional \code{factor} allowing for grouping the subjects
-    (rows). If specified, a multiple group model is fitted to account for impact
-    (see details below). By default, no impact is modelled, i.e., a single group
-    model is fitted.}
-  \item{start}{an optional list of starting values (see examples below).}
+  (rows). If specified, a multiple group model is fitted to account for impact.
+  By default, no impact is modelled, i.e., a single group model is fitted.}
+  \item{start}{an optional list of starting values.}
   \item{control}{an optional list of control parameters for the EM algorithm.}
   \item{algo_settings}{an optional list of control parameters for the numerical
     optimization method.}
 }
 
 \details{
+  \code{fastRM} returns an object of class \code{"rm"} for which several
+  basic methods are available, including \code{print}, \code{summary},
+  \code{coef}, \code{vcov} (OPG estimate), \code{logLik}, and \code{estfun}.
+
+  Optimization is performed relying on \code{OptimLib}.
+
   \code{control} allows for the following settings (their defaults being shown
     in the first place):
   \itemize{
   \item{optimizer = "BFGS", "Newton", "L-BFGS", "CG", "GD", "NM", "DE", "PSO"}
-  \item{accelerator = "Zhou", "none", "Ramsay", "SQUAREM"}
+  \item{accelerator = "Zhou", "Ramsay", "SQUAREM", "none"}
   \item{maxit = 500}
   \item{reltol = 1e-4}
   \item{Q = 61}
+  \item{global = FALSE}
   }
   \code{algo_settings} allows for the following settings (their defaults being
     shown in the first place):
@@ -93,7 +102,7 @@ fastRM(y, weights = NULL, impact = NULL, start = NULL,
 }
 
 \value{
-  \code{fastRM} returns an S3 object of class \code{"rm"},  i.e., a list of
+  \code{fastRM} returns an S3 object of class \code{"rm"}, i.e., a list of
     the following components:
   \item{ipars}{estimated item parameters in slope/intercept parametrization,}
   \item{mu}{(estimated) mean(s) of the normal distribution(s) for the person
@@ -107,7 +116,7 @@ fastRM(y, weights = NULL, impact = NULL, start = NULL,
   \item{critval}{critical value indicating termination of the EM,}
   \item{y_u}{processed item response matrix containing unique rows (possibly
     reordered),}
-  \item{rgl}{number of occurences of each pattern (row) in y_ splitted for each
+  \item{rgl}{number of occurences of each pattern (row) in y_u splitted for each
     level of \code{impact} (if supplied),}
   \item{X}{quadrature nodes,}
   \item{AX}{quadrature weights splitted for each level of \code{impact} (if
@@ -116,9 +125,31 @@ fastRM(y, weights = NULL, impact = NULL, start = NULL,
 }
 
 \references{
-  FIXME
+  Bock RD, Aitkin M (1981).
+  Marginal Maximum Likelihood Estimation of Item Parameters: Application of
+  an EM Algorithm.
+  \emph{Psychometrika}, \bold{46}(4), 443--459.
+
+  O'Hara K (2019).
+  OptimLib: A lightweight C++ library of numerical optimization methods for
+  nonlinear functions.
+  \url{https://www.kthohr.com/optimlib.html}.
+
+  Ramsay JO (1975).
+  Solving Implicit Equations in Psychometric Data Analysis.
+  \emph{Psychometrika}, \bold{40}(3), 337--360.
+
+  Varadhan R, Roland C (2008).
+  Simple and Globally Convergent Methods for Accelerating the Convergence of
+  any EM Algorithm.
+  \emph{Scandinavian Journal of Statistics}, \bold{35}(2), 335--353.
+
+  Zhou H, Alexander D, Lange K (2011).
+  A Quasi-Newton Acceleration for High-Dimensional Optimization Algorithms.
+  \emph{Statistics and Computing}, \bold{21}(2), 261--273.
 }
 
-%\seealso{}
-
-%\examples{}
+\examples{
+  data(LSAT7, package = "sonic")
+  m1 <- fastRM(LSAT7)
+}

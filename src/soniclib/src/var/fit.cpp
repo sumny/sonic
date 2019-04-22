@@ -17,7 +17,7 @@
 // FIXME infinite values in optimization
 // FIXME NA values
 // FIXME probs functions in misc.cpp
-// FIXME always else if instead else
+// FIXME always "else if" instead "else"
 RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmodel, SEXP Rcontrol, SEXP Ralgo_settings)
 {
   BEGIN_RCPP
@@ -49,7 +49,7 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   arma::mat y_u_ = 1 - y_u;
   timer.step("unique_data");
 
-  // start values (slopes and intercepts, group means and variances)
+  // start values (item parameters, group means and variances)
   arma::vec ipars = Rcpp::as<arma::vec>(start[0]);
   arma::vec mu = Rcpp::as<arma::vec>(start[1]);
   arma::vec sg = arma::sqrt(Rcpp::as<arma::vec>(start[2]));

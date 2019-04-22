@@ -28,9 +28,9 @@ OBJECTS_VAR= $(SOURCES_VAR:.cpp=.o)
 
 OBJECTS_sonic= $(OBJECTS_OPTIM) $(OBJECTS_VAR)
 
-all: $(SHLIB) libsonic$(SHLIB_EXT)
+all: $(SHLIB) libsonic.dll
 
-libsonic$(SHLIB_EXT): $(OBJECTS_sonic)
-	$(SHLIB_CXX11LD) $(SHLIB_CXX11LDFLAGS) -o sonic$(SHLIB_EXT) $(OBJECTS_sonic) $(ALL_LIBS)
-#libsonic$(SHLIB_EXT): $(OBJECTS_sonic)
-	#$(SHLIB_CXX11LD) $(SHLIB_OPENMP_CXXFLAGS) $(SHLIB_CXX11LDFLAGS) -o sonic$(SHLIB_EXT) $(OBJECTS_sonic) $(ALL_LIBS)
+libsonic.dll: $(OBJECTS_sonic)
+	$(SHLIB_CXXLD) -shared -s -static-libstdc++ -static-libgcc -o sonic.dll $(OBJECTS_sonic) $(SHLIB_CXXLDFLAGS) $(ALL_LIBS)
+#libsonic.dll: $(OBJECTS_sonic)
+	#$(SHLIB_CXXLD) -shared -s -static-libstdc++ -static-libgcc $(SHLIB_OPENMP_CXXFLAGS) -o sonic.dll $(OBJECTS_sonic) $(SHLIB_CXXLDFLAGS) $(ALL_LIBS)

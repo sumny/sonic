@@ -1,7 +1,7 @@
 useDynLib(sonic, .registration = TRUE)
 
 import("stats")
-importFrom("Rcpp", "evalCpp")
+import("Rcpp")
 
 export("fastRM", "fast2PL", "fast3PL", "fast3PLu", "fast4PL",
   "estfun.rm", "estfun.twopl", "estfun.threepl", "estfun.threeplu", "estfun.fourpl"
