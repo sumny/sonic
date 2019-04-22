@@ -11,6 +11,6 @@ Fast and Efficient Marginal Maximum Likelihood Estimation of Item Response Model
 devtools::install_github("sumny/sonic")
 ```
 
-# Licence
+## Licence
 
 This package is free and open source software, licensed under [GPL (>= 2)](http://www.gnu.org/licenses/gpl-2.0.en.html).
