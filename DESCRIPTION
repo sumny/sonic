@@ -2,11 +2,11 @@ Package: sonic
 Type: Package
 Title: Fast and Efficient Marginal Maximum Likelihood Estimation of Item Response Models
 Version: 0.1-1
-Date: 2019-04-22
+Date: 2019-04-23
 Author: Lennart Schneider
 Maintainer: Lennart Schneider <lennart.sch@web.de>
 Description: Fitting various IRT models via marginal maximum likelihood estimation relying on an EM algorithm.
-License: GPL (>= 2)
+License: GPL (>= 3)
 Depends: R (>= 3.4.0)
 Imports: Rcpp, stats
 Suggests: testthat

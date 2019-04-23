@@ -13,4 +13,5 @@ devtools::install_github("sumny/sonic")
 
 ## Licence
 
-This package is free and open source software, licensed under [GPL (>= 2)](http://www.gnu.org/licenses/gpl-2.0.en.html).
+This package is free and open source software, licensed under [GPL (>= 3)](http://www.gnu.org/licenses/gpl-3.0.en.html).
+This package relies on [OptimLib](https://www.kthohr.com/optimlib.html), a C++ library for numerical optimization methods which is released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
