@@ -55,6 +55,7 @@ fast2PL(y, weights = NULL, impact = NULL, start = NULL,
   \item{reltol = 1e-4}
   \item{Q = 61}
   \item{global = FALSE}
+  \item{criterion = "ll", "l2", "l2_itemwise"}
   }
   \code{algo_settings} allows for the following settings (their defaults being
     shown in the first place):

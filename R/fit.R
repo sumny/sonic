@@ -8,7 +8,7 @@ fit <- function(y, M, N, weights, impact, start, model, control, algo_settings)
     levels = c("2PL", "RM", "3PL", "3PLu", "4PL"))) - 1L
 
   ### EM and general control settings
-  Rcontrol <- list(optimizer = 1L, accelerator = 3L, maxit = 500L, reltol = 1e-4, Q = 61L, global = FALSE, criterion = 0L)
+  Rcontrol <- list(optimizer = 1L, accelerator = 3L, maxit = 500L, reltol = 1e-4, quadtype = 0, Q = 61L, global = FALSE, criterion = 0L)
 
   ### optimizer (starting from 0)
   control$optimizer <- as.integer(factor(match.arg(control$optimizer,
@@ -20,7 +20,10 @@ fit <- function(y, M, N, weights, impact, start, model, control, algo_settings)
     c("Zhou", "none", "Ramsay", "SQUAREM")),
     levels = c("none", "Ramsay", "SQUAREM", "Zhou"))) - 1L
 
-  ### maxit, reltol, Q, global
+  ### quadtype (starting from 0)
+  control$quadtype <- as.integer(factor(match.arg(control$quadtype,
+    c("ER", "GH", "CR")),
+    levels = c("ER", "GH", "CR"))) - 1L
 
   ### criterion (starting from 0)
   control$criterion <- as.integer(factor(match.arg(control$criterion,
@@ -30,8 +33,14 @@ fit <- function(y, M, N, weights, impact, start, model, control, algo_settings)
   ### Newton currently only 2PL or RM
   Rcontrol[names(control)] <- control
   if(((model != 0) && (model != 1)) && Rcontrol$optimizer == 0) {
-    warning("'optimizer = Newton' currently only supported for 2PL or RM. Switched to 'BFGS'.")
+    warning("'optimizer = 'Newton'' currently only supported for 2PL or RM. Switched to 'BFGS'.")
     Rcontrol$optimizer <- 1
+  }
+
+  ### GH quadrature only if G = 1 and not Rasch
+  if(((model == 1) || length(levels(impact)) > 1) && Rcontrol$quadtype == 1) {
+    warning("'quadtype = 'GH'' currently only supported for non-Rasch single group models.")
+    Rcontrol$quadtype <- 0
   }
 
   ### global currently only 2PL - always worse than local so drop this soon
@@ -40,7 +49,7 @@ fit <- function(y, M, N, weights, impact, start, model, control, algo_settings)
     Rcontrol$global <- FALSE
   }
 
-  if(control$criterion == 2) {
+  if((control$criterion == 2) && (Rcontrol$global == TRUE)) {
     warning("'criterion = l2_itemwise' requires 'global = FALSE'.")
     Rcontrol$global <- FALSE
   }

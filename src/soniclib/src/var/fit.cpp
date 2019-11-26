@@ -2,6 +2,7 @@
 #include <math.h>
 //#include <omp.h>
 #include "optim/optim.hpp"
+#include <fastGHQuad.h>
 #include <Rcpp/Benchmark/Timer.h>
 #include <RcppArmadillo.h>
 //#include <time.h>
@@ -18,6 +19,12 @@
 // FIXME NA values
 // FIXME probs functions in misc.cpp
 // FIXME always "else if" instead "else"
+// FIXME option for Laplace appriximation instead of quadrature methods
+// FIXME MC quadrature
+// FIXME classical Bock solution
+// check starting values list
+
+// [[Rcpp::depends(fastGHQuad)]]
 RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmodel, SEXP Rcontrol, SEXP Ralgo_settings)
 {
   BEGIN_RCPP
@@ -36,8 +43,8 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   const Rcpp::List control = Rcpp::as<Rcpp::List>(Rcontrol);
   const Rcpp::List algo_settings = Rcpp::as<Rcpp::List>(Ralgo_settings);
   const arma::uword M = y.n_rows, N = y.n_cols, G = groups.n_elem;
-  const arma::uword optimizer = Rcpp::as<arma::uword>(control[0]), accelerator = Rcpp::as<arma::uword>(control[1]), maxit = Rcpp::as<arma::uword>(control[2]), Q = Rcpp::as<arma::uword>(control[4]), criterion = Rcpp::as<arma::uword>(control[6]);
-  const bool global = Rcpp::as<bool>(control[5]);
+  const arma::uword optimizer = Rcpp::as<arma::uword>(control[0]), accelerator = Rcpp::as<arma::uword>(control[1]), maxit = Rcpp::as<arma::uword>(control[2]), quadtype = Rcpp::as<arma::uword>(control[4]), Q = Rcpp::as<arma::uword>(control[5]), criterion = Rcpp::as<arma::uword>(control[7]);
+  const bool global = Rcpp::as<bool>(control[6]);
   const double reltol = Rcpp::as<double>(control[3]);
   const bool compute_ll = (criterion == 0);
   timer.step("declarations");
@@ -54,12 +61,38 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   arma::vec mu = Rcpp::as<arma::vec>(start[1]);
   arma::vec sg = arma::sqrt(Rcpp::as<arma::vec>(start[2]));
 
-  // quadrature stuff
-  const arma::vec X = arma::linspace<arma::vec>(-6, 6, Q);
+  // quadrature stuff, 0 == "ER", 1 == "GH", 2 == "CR"
+  arma::vec X(Q, arma::fill::none);
   arma::mat AX(Q, G, arma::fill::none);
-  for(arma::uword g = 0; g < G; ++g) {
-    AX.col(g) = arma::normpdf(X, mu(g), sg(g));
-    AX.col(g) /= arma::accu(AX.col(g));
+  if(quadtype == 0) {
+    X = arma::linspace<arma::vec>(-6, 6, Q);
+    for(arma::uword g = 0; g < G; ++g) {
+      AX.col(g) = arma::normpdf(X, mu(g), sg(g));
+      AX.col(g) /= arma::accu(AX.col(g));
+    }
+  } else if(quadtype == 1) {
+    // use fastGHQuad
+    std::vector<double> X_gh(Q), AX_gh(Q);
+    fastGHQuad::gaussHermiteDataGolubWelsch(Q, &X_gh, &AX_gh);
+    //X = arma::conv_to<arma::vec>::from(X_gh);
+    //X *= std::sqrt(2);
+    //AX.col(0) = arma::conv_to<arma::vec>::from(AX_gh);
+    //AX.col(0) /= std::sqrt(M_PI);
+    // FIXME lui1994, sqrt(2) in function evaluations
+    X = arma::conv_to<arma::vec>::from(X_gh);
+    X *= std::sqrt(2);
+    AX.col(0) = arma::conv_to<arma::vec>::from(AX_gh);
+    AX.col(0) %= arma::exp(arma::pow(X, 2));
+    AX.col(0) /= arma::accu(AX.col(0));
+  } else if(quadtype == 2) {
+    arma::uvec low_q = arma::linspace<arma::uvec>(0, ((2 * Q) / 5) - 1, (2 * Q) / 5);
+    arma::uvec mid_q = arma::linspace<arma::uvec>(((2 * Q) / 5), ((3 * Q) / 5) - 1, Q / 5);
+    arma::uvec high_q = arma::linspace<arma::uvec>(((3 * Q) / 5), Q - 1, (2 * Q) / 5);
+    X(low_q) = arma::linspace<arma::vec>(-6, -2, (2 * Q) / 5);
+    X(mid_q) = arma::linspace<arma::vec>(-2, 2, Q / 5);
+    X(high_q) = arma::linspace<arma::vec>(2, 6, (2 * Q) / 5);
+    AX.col(0) = arma::normpdf(X, mu(0), sg(0));
+    AX.col(0) /= arma::accu(AX.col(0));
   }
   
   // some more declarations
@@ -322,6 +355,8 @@ RcppExport SEXP fit(SEXP Ry, SEXP Rweights, SEXP Rimpact, SEXP Rstart, SEXP Rmod
   ret["X"] = Rcpp::wrap(X);
   ret["AX"] = Rcpp::wrap(AX);
   ret["time"] = Rcpp::wrap(time);
+  ret["rj_g"] = Rcpp::wrap(rj_g);
+  ret["pgul"] = Rcpp::wrap(pgul);
   // debug stuff
   //ret["debug_ll"] = Rcpp::wrap(ll);
   //ret["debug_gr"] = Rcpp::wrap(gradient_g);

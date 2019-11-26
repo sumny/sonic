@@ -18,6 +18,8 @@
   ##
   ################################################################################*/
 
+// Modifications copyright (C) 2019 Lennart Schneider
+
 /*
  * BFGS method for quasi-Newton-based non-linear optimization
  */
@@ -46,7 +48,7 @@ optim::bfgs_int(arma::vec& init_out_vals, std::function<double (const arma::vec&
     const uint_t iter_max = settings.iter_max;
     const double err_tol = settings.err_tol;
 
-    const double wolfe_cons_1 = 1E-03; // line search tuning parameters
+    const double wolfe_cons_1 = 1E-02; // line search tuning parameters
     const double wolfe_cons_2 = 0.90;
 
     const bool vals_bound = settings.vals_bound;
@@ -126,6 +128,7 @@ optim::bfgs_int(arma::vec& init_out_vals, std::function<double (const arma::vec&
     arma::vec x_p = x, grad_p = grad;
 
     line_search_mt(1.0, x_p, grad_p, d, &wolfe_cons_1, &wolfe_cons_2, box_objfn, opt_data);
+    //line_search_bt(1.0, x_p, grad_p, d, &wolfe_cons_1, box_objfn, opt_data);
 
     err = arma::norm(grad, 2);  // check updated values
     if (err <= err_tol) 
@@ -169,6 +172,7 @@ optim::bfgs_int(arma::vec& init_out_vals, std::function<double (const arma::vec&
 
         d = - W*grad;
         line_search_mt(1.0, x_p, grad_p, d, &wolfe_cons_1, &wolfe_cons_2, box_objfn, opt_data);
+        //line_search_bt(1.0, x_p, grad_p, d, &wolfe_cons_1, box_objfn, opt_data);
         
         err = arma::norm(grad_p, 2);
         if (err <= err_tol) {
